@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Root (animate + flip)",
+    "path": "./dist/index.js",
+    "limit": "12 kB"
+  },
+  {
+    "name": "animate only",
+    "path": "./dist/animate/index.js",
+    "limit": "8 kB"
+  },
+  {
+    "name": "flip only",
+    "path": "./dist/flip/index.js",
+    "limit": "6 kB"
+  }
+]
