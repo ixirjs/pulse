@@ -94,6 +94,9 @@ export const createController = ({
     for (const anim of animations) fn(anim);
   };
   const cancelAnimations = (): void => forEachAnim(a => a.cancel());
+  // All timing buckets share the same clock, so the first animation represents
+  // the group for currentTime / playbackRate reads.
+  const primaryAnimation = animations[0];
 
   let finalized = false;
   const finalize = (): void => {
@@ -144,11 +147,11 @@ export const createController = ({
       return getFinished();
     },
     get currentTime(): number | null {
-      const t = animations[0]?.currentTime;
+      const t = primaryAnimation?.currentTime;
       return typeof t === "number" ? t : null;
     },
     get playbackRate(): number {
-      return animations[0]?.playbackRate ?? 1;
+      return primaryAnimation?.playbackRate ?? 1;
     },
     set playbackRate(rate: number) {
       forEachAnim(a => (a.playbackRate = rate));

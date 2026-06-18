@@ -119,13 +119,17 @@ export const buildFlipProps = (
   { dx, dy, sx, sy }: FlipDelta,
   forward: boolean,
 ): AnimateProps => {
+  // `pair` orders the [from, to] keyframe by direction; `translate`/`scale`
+  // capture each component's unit and identity so they live in one place.
   const pair = (delta: string, identity: string): [string, string] =>
     forward ? [identity, delta] : [delta, identity];
+  const translate = (v: number): [string, string] => pair(`${v}px`, "0px");
+  const scale = (v: number): [string, string] => pair(`${v}`, "1");
   return {
-    flipX:      pair(`${dx}px`, "0px"),
-    flipY:      pair(`${dy}px`, "0px"),
-    flipScaleX: pair(`${sx}`, "1"),
-    flipScaleY: pair(`${sy}`, "1"),
+    flipX:      translate(dx),
+    flipY:      translate(dy),
+    flipScaleX: scale(sx),
+    flipScaleY: scale(sy),
   };
 };
 

@@ -51,6 +51,24 @@ const resolveFrom = (
   return raw;
 };
 
+/**
+ * Resolve a prop's `to` endpoint. Intrinsic-size keywords are measured to a
+ * concrete px value and recorded in `restorations` so the keyword is reapplied
+ * once the animation finishes; everything else formats directly.
+ */
+const resolveTo = (
+  element: MotionElement,
+  def: PropDef,
+  raw: AnimatableValue,
+  restorations: CssWrite[],
+): string => {
+  if (def.measurable && isAutoKeyword(raw)) {
+    restorations.push({ css: def.css, value: raw });
+    return measureKeywordValue(element, def, raw);
+  }
+  return formatValue(raw, def);
+};
+
 /** Linear search over groups (typically 1-3 entries). Avoids hashing the
  *  potentially huge `linear(...)` easing string used in the previous Map key. */
 const findGroup = (
@@ -96,14 +114,7 @@ export const buildKeyframes = (
     const timing = resolveTiming(config, element);
 
     const fromStr = resolveFrom(element, def, from, from == null ? getComputed() : undefined);
-
-    let toStr: string;
-    if (def.measurable && isAutoKeyword(to)) {
-      toStr = measureKeywordValue(element, def, to);
-      restorations.push({ css: def.css, value: to });
-    } else {
-      toStr = formatValue(to, def);
-    }
+    const toStr = resolveTo(element, def, to, restorations);
     finalStyles.push({ css: def.css, value: toStr });
 
     let group = findGroup(groups, timing);
