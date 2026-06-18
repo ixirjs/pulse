@@ -1,4 +1,4 @@
-import type { SpringOptions } from '$lib/shared/types';
+import type { EasingFn, SpringOptions } from '$lib/shared/types';
 import { getCachedSpring, sampleAt } from '$lib/shared/spring-core';
 
 /**
@@ -18,6 +18,14 @@ export interface SpringEasingFn {
   /** @internal Pre-built WAAPI linear(…) string at full simulation fidelity. */
   readonly _linearEasing: string;
 }
+
+/**
+ * Type guard for a {@link SpringEasingFn} — true when the easing carries the
+ * pre-built `_linearEasing` string (and therefore a natural `duration`) that
+ * `springEasing()` attaches. Lets callers read those fields without a cast.
+ */
+export const isSpringEasing = (fn: EasingFn): fn is SpringEasingFn =>
+  "_linearEasing" in fn;
 
 /**
  * Create a `SpringEasingFn` driven by spring physics.

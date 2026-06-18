@@ -7,6 +7,7 @@
 
 import type { EasingFn } from "../types";
 import { cubicOut } from "$lib/easing/primitive";
+import { isSpringEasing } from "$lib/easing/spring";
 import { samplesToLinearEasing } from "$lib/shared/spring-core";
 
 export const DEFAULT_DURATION = 300;
@@ -30,8 +31,8 @@ const sampleEasing = (fn: EasingFn): string => {
  */
 export const easingToCss = (easing: EasingFn | undefined): string => {
   const fn = easing ?? DEFAULT_EASING;
-  // SpringEasingFn carries a pre-built high-fidelity string; prefer it over the 25-point cache.
-  const cached = (fn as { _linearEasing?: string })._linearEasing ?? EASING_CACHE.get(fn);
+  // Prefer a spring's pre-built high-fidelity string over the 25-point resample.
+  const cached = isSpringEasing(fn) ? fn._linearEasing : EASING_CACHE.get(fn);
   if (cached) return cached;
   const css = sampleEasing(fn);
   EASING_CACHE.set(fn, css);

@@ -22,6 +22,7 @@ import {
   DEFAULT_DURATION,
   easingToCss,
 } from "./easing-utils";
+import { isSpringEasing } from "$lib/easing/spring";
 
 interface ResolvedTiming {
   duration: number;
@@ -83,19 +84,23 @@ export const normalizeInput = (
 };
 
 export const resolveTiming = (config: PropConfig, element?: MotionElement): ResolvedTiming => {
-  const delay = config.delay ?? 0;
+  // The spring and non-spring paths differ only in the easing string and the
+  // duration to fall back on when no explicit `duration` is given; the
+  // resolveDurationMs() call and result shape are shared.
+  let easing: string;
+  let durationFallback: number;
   if (config.spring) {
     const cached = getCachedSpring(resolveSpring(config.spring));
-    return {
-      duration: resolveDurationMs(config.duration, element, cached.spring.duration),
-      easing: cached.linearEasingCss,
-      delay,
-    };
+    easing = cached.linearEasingCss;
+    durationFallback = cached.spring.duration;
+  } else {
+    const fn = config.easing;
+    easing = easingToCss(fn);
+    durationFallback = (fn && isSpringEasing(fn) ? fn.duration : undefined) ?? DEFAULT_DURATION;
   }
-  const easingDuration = (config.easing as { duration?: number } | undefined)?.duration;
   return {
-    duration: resolveDurationMs(config.duration, element, easingDuration ?? DEFAULT_DURATION),
-    easing: easingToCss(config.easing),
-    delay,
+    duration: resolveDurationMs(config.duration, element, durationFallback),
+    easing,
+    delay: config.delay ?? 0,
   };
 };
