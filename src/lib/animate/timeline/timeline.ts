@@ -121,8 +121,11 @@ export const timeline = (defaults: TimelineDefaults = {}): Timeline => {
 
     cachedAnimations = controllers.flatMap(c => c.animations);
 
+    // Apply any pre-materialization rate through the same controller setter the
+    // live setPlaybackRate() uses, so playback-rate changes have one code path.
     if (pendingPlaybackRate !== undefined) {
-      for (const anim of cachedAnimations) anim.playbackRate = pendingPlaybackRate;
+      const rate = pendingPlaybackRate;
+      forEachCtrl(c => (c.playbackRate = rate));
     }
   };
 
