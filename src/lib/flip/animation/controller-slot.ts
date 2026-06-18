@@ -13,7 +13,7 @@ import { animateFlip } from "./animator";
 import { cancelController } from "./cancel-controller";
 import type { FlipAnimateArgs } from "../types";
 
-export interface ControllerSlot {
+interface ControllerSlot {
   /** Cancel any in-flight controller, then start a new FLIP animation. */
   run: (args: FlipAnimateArgs) => void;
   /** Cancel the current controller and empty the slot (teardown). */

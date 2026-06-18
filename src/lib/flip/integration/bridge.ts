@@ -24,6 +24,9 @@ export interface LayoutBridgeHandle {
   clear: () => void;
 }
 
+/** Default lifetime of an unread layout record, in ms. */
+const DEFAULT_LAYOUT_TTL_MS = 250;
+
 const now = (): number =>
   typeof performance !== "undefined" ? performance.now() : Date.now();
 
@@ -31,10 +34,11 @@ const now = (): number =>
  * Create an in-memory layout registry exposing the {@link LayoutBridge}
  * interface plus a `clear()` escape hatch.
  *
- * @param ttlMs   How long an unread record stays valid. Defaults to 250 ms.
+ * @param ttlMs   How long an unread record stays valid. Defaults to
+ *                {@link DEFAULT_LAYOUT_TTL_MS}.
  */
 export const createLayoutBridge = (ttlMs?: number): LayoutBridgeHandle => {
-  const ttl = ttlMs ?? 250;
+  const ttl = ttlMs ?? DEFAULT_LAYOUT_TTL_MS;
   const registry = new Map<string, LayoutRecord>();
 
   const bridge: LayoutBridge = {

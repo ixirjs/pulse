@@ -12,7 +12,7 @@ export interface LayoutObservers {
   disconnect: () => void;
 }
 
-export interface LayoutObserverArgs {
+interface LayoutObserverArgs {
   element: Element;
   onChange: () => void;
 }

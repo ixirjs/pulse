@@ -83,7 +83,7 @@ describe("createReflowScheduler() — with mocked RAF", () => {
   it("cancel() calls cancelAnimationFrame with the scheduled handle", () => {
     const origRaf = globalThis.requestAnimationFrame;
     const origCaf = globalThis.cancelAnimationFrame;
-    globalThis.requestAnimationFrame = (_cb) => 42;
+    globalThis.requestAnimationFrame = () => 42;
     let cancelled: number | null = null;
     globalThis.cancelAnimationFrame = (id) => {
       cancelled = id;

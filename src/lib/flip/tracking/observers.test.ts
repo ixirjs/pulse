@@ -74,7 +74,7 @@ describe("createLayoutObservers() — with mocked observers", () => {
     class MockResizeObserver {
       observe = vi.fn();
       disconnect = roDisconnect;
-      constructor(_cb: unknown) {}
+      constructor() {}
     }
     const origRO = (globalThis as Record<string, unknown>).ResizeObserver;
     (globalThis as Record<string, unknown>).ResizeObserver = MockResizeObserver;
@@ -94,7 +94,7 @@ describe("createLayoutObservers() — with mocked observers", () => {
     class MockMutationObserver {
       observe = moObserve;
       disconnect = moDisconnect;
-      constructor(_cb: unknown) {}
+      constructor() {}
     }
     const origMO = (globalThis as Record<string, unknown>).MutationObserver;
     (globalThis as Record<string, unknown>).MutationObserver = MockMutationObserver;

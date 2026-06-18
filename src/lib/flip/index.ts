@@ -35,7 +35,7 @@ export const flip = <T extends MotionElement>(
 ): Attachment<T> => createFlipAttachment(input, null);
 
 /** Capture an element's current rect to pass to {@link flipFrom} later. */
-export const snapshotRect = (element: Element): FlipRect => measure(element);
+export const snapshotRect = measure;
 
 /** Animate an element from a captured rect to its current position. */
 export const flipFrom = (
