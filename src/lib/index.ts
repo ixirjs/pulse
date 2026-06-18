@@ -11,4 +11,3 @@
  */
 export * from './flip';
 export * from './animate';
-export * from './shared';
