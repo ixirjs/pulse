@@ -1,4 +1,4 @@
-import type { EasingFn } from '../animate/types';
+import type { EasingFn } from '$lib/shared/types';
 import { linear } from './primitive';
 
 const NEWTON_ITERATIONS = 8;

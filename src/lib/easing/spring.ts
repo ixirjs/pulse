@@ -1,5 +1,5 @@
-import type { SpringOptions } from '../animate/types';
-import { getCachedSpring } from '../animate/spring';
+import type { SpringOptions } from '$lib/shared/types';
+import { getCachedSpring, sampleAt } from '$lib/shared/spring-core';
 
 /**
  * A spring-physics easing function returned by `springEasing()`.
@@ -50,17 +50,8 @@ export interface SpringEasingFn {
  * });
  * ```
  */
-export const springEasing = (options?: SpringOptions): SpringEasingFn => {
-  const { spring: { samples, duration }, linearEasingCss } = getCachedSpring(options ?? {});
-  const last = samples.length - 1;
-  const fn = (t: number): number => {
-    if (t <= 0) return 0;
-    if (t >= 1) return samples[last]!;
-    const pos = t * last;
-    const lo = Math.floor(pos);
-    const hi = lo + 1 > last ? last : lo + 1;
-    const frac = pos - lo;
-    return samples[lo]! + (samples[hi]! - samples[lo]!) * frac;
-  };
+export const springEasing = (options: SpringOptions = {}): SpringEasingFn => {
+  const { spring: { samples, duration }, linearEasingCss } = getCachedSpring(options);
+  const fn = (t: number): number => sampleAt(samples, t);
   return Object.assign(fn, { duration, _linearEasing: linearEasingCss });
 };
