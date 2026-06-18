@@ -11,7 +11,7 @@ import type {
   CreateFlipScopeOptions,
   FlipOptionsInput,
   FlipScope,
-} from "./types";
+} from "../types";
 
 /**
  * Create an isolated FLIP scope with a shared-layout registry.
@@ -29,7 +29,7 @@ import type {
 export const createFlipScope = (
   opts: CreateFlipScopeOptions = {},
 ): FlipScope => {
-  const { bridge, clear } = createLayoutBridge(opts.layoutTtlMs ?? 250);
+  const { bridge, clear } = createLayoutBridge(opts.layoutTtlMs);
 
   return {
     flip: (input?: FlipOptionsInput) => createFlipAttachment(input, bridge),

@@ -20,11 +20,10 @@
 
 import { untrack } from "svelte";
 import type { Attachment } from "svelte/attachments";
-import type { AnimationController } from "$lib/animate/types";
 import { isBrowser } from "$lib/shared/browser";
-import { animateFlip } from "./animator";
-import { measure } from "./geometry";
-import type { FlipOptions, FlipRect } from "./types";
+import { createControllerSlot } from "../animation/controller-slot";
+import { measure } from "../geometry";
+import type { FlipOptions, FlipRect, MotionElement } from "../types";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -34,23 +33,15 @@ export type FlipSwitchRole = "source" | "target";
 
 export interface FlipSwitcher {
   /** Attach to the element that acts as the *source* (initial / "from") side. */
-  source: Attachment<HTMLElement | SVGElement>;
+  source: Attachment<MotionElement>;
   /** Attach to the element that acts as the *target* (secondary / "to") side. */
-  target: Attachment<HTMLElement | SVGElement>;
+  target: Attachment<MotionElement>;
 }
 
 // ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
 
-const cancelController = (c: AnimationController | null): void => {
-  if (!c) return;
-  try {
-    c.cancel();
-  } catch {
-    /* noop */
-  }
-};
 
 /**
  * Create a FLIP switcher that animates between two elements.
@@ -71,11 +62,11 @@ export const createFlipSwitcher = (
 
   const makeAttachment = (
     role: FlipSwitchRole,
-  ): Attachment<HTMLElement | SVGElement> => {
+  ): Attachment<MotionElement> => {
     return (element) => {
       if (!isBrowser()) return;
 
-      let currentController: AnimationController | null = null;
+      const slot = createControllerSlot();
       let prevActive: FlipSwitchRole = untrack(resolver);
 
       // Snapshot own rect before every DOM update so the other role can use
@@ -102,25 +93,12 @@ export const createFlipSwitcher = (
 
         const to = measure(element);
 
-        cancelController(currentController);
-        currentController = animateFlip({
-          element,
-          from,
-          to,
-          options: {
-            ...options,
-            onEnd: (el, info) => {
-              if (info.finished) currentController = null;
-              options.onEnd?.(el, info);
-            },
-          },
-        });
+        slot.run({ element, from, to, options });
       });
 
       return () => {
         delete preRects[role];
-        cancelController(currentController);
-        currentController = null;
+        slot.cancel();
       };
     };
   };

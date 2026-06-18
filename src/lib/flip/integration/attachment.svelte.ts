@@ -9,29 +9,21 @@
 
 import { untrack } from "svelte";
 import type { Attachment } from "svelte/attachments";
-import type { AnimationController } from "$lib/animate/types";
 import { isBrowser } from "$lib/shared/browser";
-import { animateFlip } from "./animator";
-import { measure, rectsEqual } from "./geometry";
-import type { ObserverManager } from "./observer-manager";
-import { readOptions } from "./options";
-import { createReflowScheduler } from "./scheduler";
+import type { LayoutBridge } from "./bridge";
+import { createControllerSlot } from "../animation/controller-slot";
+import { measure, rectsEqual } from "../geometry";
+import type { ObserverManager } from "../tracking/observer-manager";
+import { readOptions } from "../options";
+import { createReflowScheduler } from "../tracking/scheduler";
 import type {
   FlipAuto,
   FlipOptions,
   FlipOptionsInput,
   FlipRect,
-  LayoutBridge,
-} from "./types";
+  MotionElement,
+} from "../types";
 
-const cancelController = (controller: AnimationController | null): void => {
-  if (!controller) return;
-  try {
-    controller.cancel();
-  } catch {
-    /* noop — animation may already be torn down */
-  }
-};
 
 /**
  * Core FLIP attachment factory. Shared between the standalone `flip()`
@@ -40,7 +32,7 @@ const cancelController = (controller: AnimationController | null): void => {
 export const createFlipAttachment = (
   input: FlipOptionsInput,
   bridge: LayoutBridge | null,
-): Attachment<HTMLElement | SVGElement> => {
+): Attachment<MotionElement> => {
   return (element) => {
     if (!isBrowser()) return;
 
@@ -49,28 +41,13 @@ export const createFlipAttachment = (
     let layoutId = options.layoutId;
     let prevRect: FlipRect | null =
       layoutId && bridge ? bridge.readLayout(layoutId) : null;
-    let currentController: AnimationController | null = null;
     let renderCount = 0;
 
-    // -----------------------------------------------------------------
-    // Animation runner — interrupts any in-flight controller.
-    // -----------------------------------------------------------------
-    const run = (from: FlipRect, to: FlipRect): void => {
-      const snapshot = options;
-      cancelController(currentController);
-      currentController = animateFlip({
-        element,
-        from,
-        to,
-        options: {
-          ...snapshot,
-          onEnd: (el, info) => {
-            if (info.finished) currentController = null;
-            snapshot.onEnd?.(el, info);
-          },
-        },
-      });
-    };
+    // The slot captures `options` by reference at call time; `applyOptions`
+    // reassigns (never mutates) `options`, so each run sees a stable snapshot.
+    const slot = createControllerSlot();
+    const run = (from: FlipRect, to: FlipRect): void =>
+      slot.run({ element, from, to, options });
 
     // -----------------------------------------------------------------
     // Reflow detection — re-measure and run if the element moved.
@@ -111,20 +88,18 @@ export const createFlipAttachment = (
     let autoEffectVersion = $state(0);
 
     const applyOptions = (next: FlipOptions): void => {
-      const nextAuto = next.auto;
-      const nextLayoutId = next.layoutId;
-      const autoChanged = nextAuto !== auto;
+      const autoChanged = next.auto !== auto;
 
       options = next;
 
-      if (nextLayoutId !== layoutId) {
-        layoutId = nextLayoutId;
+      if (next.layoutId !== layoutId) {
+        layoutId = next.layoutId;
         const restored = layoutId && bridge ? bridge.readLayout(layoutId) : null;
         prevRect = restored ?? measure(element);
       }
 
       if (autoChanged) {
-        auto = nextAuto;
+        auto = next.auto;
         // Use untrack so the read of autoEffectVersion is not registered as a
         // dependency of the enclosing $effect. Without this, `+= 1` would both
         // read *and* write the signal inside the same effect, causing Svelte to
@@ -165,8 +140,7 @@ export const createFlipAttachment = (
       scheduler.cancel();
       connectedManager?.disconnect();
       if (layoutId && bridge && prevRect) bridge.writeLayout(layoutId, prevRect);
-      cancelController(currentController);
-      currentController = null;
+      slot.cancel();
     };
   };
 };

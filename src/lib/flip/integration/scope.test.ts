@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 import { createFlipScope } from "./scope";
-import type { FlipRect } from "./types";
+import type { FlipRect } from "../types";
 
 const rect = (x = 0, y = 0, w = 100, h = 50): FlipRect => ({
   x,

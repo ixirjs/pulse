@@ -1,22 +1,17 @@
 /**
  * Pure geometry primitives for FLIP — no DOM mutation, no side effects.
  *
- * The only DOM read here is the `measure()` helper, which delegates to the
- * `animate()` package's transform-aware rect reader so a parent that's mid
- * `animate()` transform still yields the element's "at rest" rect.
+ * This is a thin flip-layer surface: `rectsEqual` and `diagonal` live here,
+ * while delta math (`computeDelta`, `isIdentityDelta`) and the transform-aware
+ * rect reader (`measure`, aliased to `captureRect`) are owned by the lower
+ * `animate()` layer and re-exported so flip consumers keep a single import.
  */
 
-import { measureWithoutAncestorTransforms } from "$lib/animate/properties";
-import type { FlipRect, FlipRectPair } from "./types";
+import { captureRect } from "$lib/animate/flip";
+import type { FlipRect } from "./types";
 
-/**
- * Read the element's layout rect, suppressing any motion transforms applied
- * by ancestors so the value is the resting layout (not the visual one).
- */
-export const measure = (el: Element): FlipRect => {
-  const { left: x, top: y, width, height } = measureWithoutAncestorTransforms(el);
-  return { x, y, width, height };
-};
+/** Read the element's layout rect, suppressing any in-flight motion transforms. */
+export const measure = captureRect;
 
 /** Approximate equality so sub-pixel jitter doesn't trigger reflows. */
 export const rectsEqual = (
@@ -33,41 +28,7 @@ export const rectsEqual = (
 export const diagonal = (a: FlipRect, b: FlipRect): number =>
   Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 
-export interface FlipDelta {
-  /** Horizontal translate component (`from.x - to.x`). */
-  dx: number;
-  /** Vertical translate component (`from.y - to.y`). */
-  dy: number;
-  /** Horizontal scale component (`from.width / to.width`). */
-  sx: number;
-  /** Vertical scale component (`from.height / to.height`). */
-  sy: number;
-}
-
-export interface DeltaOptions {
-  translate?: boolean;
-  scale?: boolean;
-}
-
-/**
- * Compute the inverted transform that places the element back at `from`.
- * Components disabled in `opts` resolve to their identity.
- */
-export const computeDelta = (
-  pair: FlipRectPair,
-  opts: DeltaOptions = {},
-): FlipDelta => {
-  const translate = opts.translate ?? true;
-  const scale = opts.scale ?? true;
-  const { from, to } = pair;
-  return {
-    dx: translate ? from.x - to.x : 0,
-    dy: translate ? from.y - to.y : 0,
-    sx: scale && to.width > 0 ? from.width / to.width : 1,
-    sy: scale && to.height > 0 ? from.height / to.height : 1,
-  };
-};
-
-/** True when the delta would produce no visible movement. */
-export const isIdentityDelta = (delta: FlipDelta): boolean =>
-  delta.dx === 0 && delta.dy === 0 && delta.sx === 1 && delta.sy === 1;
+// Delta math is owned by the lower `animate` layer — re-export so flip-layer
+// consumers keep a single `./geometry` import surface.
+export { computeDelta, isIdentityDelta, resolveFlipDelta } from "$lib/animate/flip";
+export type { FlipDelta, DeltaOptions } from "$lib/animate/flip";

@@ -1,27 +1,19 @@
 import type { Attachment } from "svelte/attachments";
-import type { ObserverManager } from "./observer-manager";
+import type { FlipRect, FlipRectPair } from "$lib/animate/flip";
+import type { EasingFn, MotionElement } from "$lib/shared/types";
+import type { ObserverManager } from "./tracking/observer-manager";
 
 // ---------------------------------------------------------------------------
 // Core geometry
 // ---------------------------------------------------------------------------
 
-export interface FlipRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface FlipRectPair {
-  from: FlipRect;
-  to: FlipRect;
-}
+export type { FlipRect, FlipRectPair, MotionElement };
 
 // ---------------------------------------------------------------------------
 // Option types
 // ---------------------------------------------------------------------------
 
-export type FlipEasing = ((t: number) => number) | string;
+export type FlipEasing = EasingFn | string;
 
 export type FlipDuration =
   | number
@@ -91,14 +83,14 @@ export interface FlipOptions {
   onEnd?: (el: Element, info: { finished: boolean; rects: FlipRectPair }) => void;
 }
 
-export type FlipOptionsInput = FlipOptions | (() => FlipOptions) | undefined;
+export type FlipOptionsInput = FlipOptions | (() => FlipOptions) | null | undefined;
 
 // ---------------------------------------------------------------------------
 // Animator args
 // ---------------------------------------------------------------------------
 
 export interface FlipAnimateArgs {
-  element: HTMLElement | SVGElement;
+  element: MotionElement;
   from: FlipRect;
   to: FlipRect;
   options?: FlipOptions;
@@ -114,15 +106,6 @@ export interface FlipAnimateArgs {
 }
 
 // ---------------------------------------------------------------------------
-// Scope bridge (internal, used by attachment + scope)
-// ---------------------------------------------------------------------------
-
-export interface LayoutBridge {
-  readLayout: (id: string) => FlipRect | null;
-  writeLayout: (id: string, rect: FlipRect) => void;
-}
-
-// ---------------------------------------------------------------------------
 // Public scope API
 // ---------------------------------------------------------------------------
 
@@ -133,7 +116,7 @@ export interface CreateFlipScopeOptions {
 
 export interface FlipScope {
   /** Attachment factory bound to this scope's shared-layout registry. */
-  flip: (input?: FlipOptionsInput) => Attachment<HTMLElement | SVGElement>;
+  flip: (input?: FlipOptionsInput) => Attachment<MotionElement>;
   /** Drop all stored layouts (useful between routes / tests). */
   clear: () => void;
 }

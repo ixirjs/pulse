@@ -1,4 +1,4 @@
-import { createLayoutObservers } from "./observers";
+import { createLayoutObservers, type LayoutObservers } from "./observers";
 
 export interface ObserverManager {
   connect: (element: Element, onChange: () => void) => void;
@@ -6,7 +6,7 @@ export interface ObserverManager {
 }
 
 export const createObserverManager = (): ObserverManager => {
-  let inner: ReturnType<typeof createLayoutObservers> | null = null;
+  let inner: LayoutObservers | null = null;
 
   return {
     connect(element, onChange) {

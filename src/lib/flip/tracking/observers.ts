@@ -23,14 +23,12 @@ export const createLayoutObservers = ({
 }: LayoutObserverArgs): LayoutObservers => {
   let resizeObserver: ResizeObserver | null = null;
   let mutationObserver: MutationObserver | null = null;
-  let observedParent: Element | null = null;
 
   const disconnect = (): void => {
     resizeObserver?.disconnect();
     resizeObserver = null;
     mutationObserver?.disconnect();
     mutationObserver = null;
-    observedParent = null;
   };
 
   const connect = (): void => {
@@ -45,7 +43,6 @@ export const createLayoutObservers = ({
     if (parent && typeof MutationObserver === "function") {
       mutationObserver = new MutationObserver(onChange);
       mutationObserver.observe(parent, { childList: true, subtree: false });
-      observedParent = parent;
     }
   };
 

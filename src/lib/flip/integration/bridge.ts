@@ -6,11 +6,16 @@
  * incurring a global registry.
  */
 
-import type { FlipRect, LayoutBridge } from "./types";
+import type { FlipRect } from "../types";
 
 interface LayoutRecord {
   rect: FlipRect;
   timestamp: number;
+}
+
+export interface LayoutBridge {
+  readLayout: (id: string) => FlipRect | null;
+  writeLayout: (id: string, rect: FlipRect) => void;
 }
 
 export interface LayoutBridgeHandle {
@@ -28,7 +33,8 @@ const now = (): number =>
  *
  * @param ttlMs   How long an unread record stays valid. Defaults to 250 ms.
  */
-export const createLayoutBridge = (ttlMs = 250): LayoutBridgeHandle => {
+export const createLayoutBridge = (ttlMs?: number): LayoutBridgeHandle => {
+  const ttl = ttlMs ?? 250;
   const registry = new Map<string, LayoutRecord>();
 
   const bridge: LayoutBridge = {
@@ -38,7 +44,7 @@ export const createLayoutBridge = (ttlMs = 250): LayoutBridgeHandle => {
     readLayout: (id) => {
       const entry = registry.get(id);
       if (!entry) return null;
-      if (now() - entry.timestamp > ttlMs) {
+      if (now() - entry.timestamp > ttl) {
         registry.delete(id);
         return null;
       }

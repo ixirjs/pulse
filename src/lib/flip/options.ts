@@ -3,8 +3,11 @@
  * animator. All helpers are pure — no DOM access, no side effects.
  */
 
-import { cubicOut } from "$lib/easing";
+import { CSS_EASINGS } from "$lib/easing";
 import type { EasingFn } from "$lib/shared/types";
+import { DEFAULT_FLIP_DURATION as DEFAULT_DURATION } from "$lib/animate/flip";
+import { DEFAULT_EASING } from "$lib/animate/keyframes/easing-utils";
+import { atLeast0 } from "$lib/shared/math";
 import { diagonal } from "./geometry";
 import type {
   FlipDuration,
@@ -15,9 +18,8 @@ import type {
   FlipRectPair,
 } from "./types";
 
-export const DEFAULT_DURATION = 280;
+export { DEFAULT_DURATION, DEFAULT_EASING };
 export const DEFAULT_DELAY = 0;
-export const DEFAULT_EASING: EasingFn = cubicOut;
 
 /** Unwrap an options thunk; thunks let callers track reactive state. */
 export const readOptions = (input: FlipOptionsInput): FlipOptions => {
@@ -34,10 +36,8 @@ export const resolveDuration = (
   rects: FlipRectPair,
 ): number => {
   if (d == null) return DEFAULT_DURATION;
-  if (typeof d === "function") {
-    return Math.max(0, d(diagonal(rects.from, rects.to), rects));
-  }
-  return Math.max(0, d);
+  const raw = typeof d === "function" ? d(diagonal(rects.from, rects.to), rects) : d;
+  return atLeast0(raw);
 };
 
 /** Normalize the `opacity` shorthand into a fully-populated config or `null`. */
@@ -53,12 +53,11 @@ export const resolveOpacity = (
  * Coerce the user-supplied easing into an `EasingFn` so we can hand it
  * straight to the `animate()` runtime (which only accepts functions).
  *
- * String forms are mapped to their cubic-bezier equivalents, falling back
- * to {@link DEFAULT_EASING} for unknown values to avoid silently breaking
- * the animation.
+ * Named CSS string easings ("ease", "ease-out", …) are mapped to their
+ * cubic-bezier equivalents. Unknown strings fall back to {@link DEFAULT_EASING}.
  */
 export const resolveEasing = (easing: FlipEasing | undefined): EasingFn => {
   if (easing == null) return DEFAULT_EASING;
   if (typeof easing === "function") return easing;
-  return DEFAULT_EASING;
+  return CSS_EASINGS[easing] ?? DEFAULT_EASING;
 };

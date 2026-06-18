@@ -31,7 +31,7 @@ export const createReflowScheduler = (task: () => void): ReflowScheduler => {
 
   const cancel = (): void => {
     if (handle == null) return;
-    if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(handle);
+    cancelAnimationFrame(handle);
     handle = null;
   };
 

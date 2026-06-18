@@ -4,6 +4,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { easeOut } from "$lib/easing";
 import {
   DEFAULT_DELAY,
   DEFAULT_DURATION,
@@ -134,8 +135,11 @@ describe("resolveEasing()", () => {
     expect(resolveEasing(fn)).toBe(fn);
   });
 
+  it("maps named CSS string easings to their function equivalents", () => {
+    expect(resolveEasing("ease-out")).toBe(easeOut);
+  });
+
   it("unknown CSS string falls back to DEFAULT_EASING", () => {
-    // String easing strings are not yet mapped, should fall back gracefully
-    expect(resolveEasing("ease-out")).toBe(DEFAULT_EASING);
+    expect(resolveEasing("my-custom-unknown-easing")).toBe(DEFAULT_EASING);
   });
 });
