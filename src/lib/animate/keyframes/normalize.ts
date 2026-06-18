@@ -6,32 +6,43 @@
  * / delay) — including spring sampling.
  */
 
-import { getCachedSpring } from "./spring";
+import { getCachedSpring } from "$lib/shared/spring-core";
+import { atLeast0 } from "$lib/shared/math";
 import type {
+  AnimatableValue,
   AnimateDefaults,
   DurationFn,
+  MotionElement,
   PropConfig,
   PropInput,
   SpringInput,
   SpringOptions,
-} from "./types";
+} from "../types";
 import {
   DEFAULT_DURATION,
-  DEFAULT_EASING_CSS,
   easingToCss,
-} from "./utils";
+} from "./easing-utils";
 
-export interface ResolvedTiming {
+interface ResolvedTiming {
   duration: number;
   easing: string;
   delay: number;
 }
 
-const isPropConfig = (input: PropInput): input is PropConfig =>
+export const isPropConfig = (input: PropInput): input is PropConfig =>
   typeof input === "object" &&
   input !== null &&
   !Array.isArray(input) &&
-  "to" in (input as PropConfig);
+  "to" in input;
+
+/**
+ * Expand the `[from, to]` tuple shorthand into the `{ from, to }` value pair.
+ * Accepts a loose array type so callers don't need a cast after the
+ * `Array.isArray` guard (which doesn't narrow readonly tuples).
+ */
+export const tupleToConfig = (
+  tuple: readonly AnimatableValue[],
+): Pick<PropConfig, "from" | "to"> => ({ from: tuple[0], to: tuple[1] });
 
 const resolveSpring = (input: SpringInput): SpringOptions =>
   input === true ? {} : input;
@@ -42,11 +53,11 @@ const resolveSpring = (input: SpringInput): SpringOptions =>
  */
 const resolveDurationMs = (
   duration: number | DurationFn | undefined,
-  element: HTMLElement | SVGElement | undefined,
+  element: MotionElement | undefined,
   fallback: number,
 ): number => {
   if (duration == null) return fallback;
-  if (typeof duration === "function") return Math.max(0, duration(element!));
+  if (typeof duration === "function") return atLeast0(duration(element!));
   return duration;
 };
 
@@ -54,48 +65,37 @@ export const normalizeInput = (
   input: PropInput,
   defaults: AnimateDefaults,
 ): PropConfig => {
+  const { duration, easing, spring, delay } = defaults;
   if (Array.isArray(input)) {
-    return {
-      from: input[0],
-      to: input[1],
-      duration: defaults.duration,
-      easing: defaults.easing,
-      spring: defaults.spring,
-      delay: defaults.delay,
-    };
+    return { ...tupleToConfig(input), duration, easing, spring, delay };
   }
   if (isPropConfig(input)) {
     return {
       from: input.from,
       to: input.to,
-      duration: input.duration ?? defaults.duration,
-      easing: input.easing ?? defaults.easing,
-      spring: input.spring ?? defaults.spring,
-      delay: input.delay ?? defaults.delay,
+      duration: input.duration ?? duration,
+      easing: input.easing ?? easing,
+      spring: input.spring ?? spring,
+      delay: input.delay ?? delay,
     };
   }
-  return {
-    to: input as number | string,
-    duration: defaults.duration,
-    easing: defaults.easing,
-    spring: defaults.spring,
-    delay: defaults.delay,
-  };
+  return { to: input as AnimatableValue, duration, easing, spring, delay };
 };
 
-export const resolveTiming = (config: PropConfig, element?: HTMLElement | SVGElement): ResolvedTiming => {
+export const resolveTiming = (config: PropConfig, element?: MotionElement): ResolvedTiming => {
+  const delay = config.delay ?? 0;
   if (config.spring) {
     const cached = getCachedSpring(resolveSpring(config.spring));
     return {
       duration: resolveDurationMs(config.duration, element, cached.spring.duration),
       easing: cached.linearEasingCss,
-      delay: config.delay ?? 0,
+      delay,
     };
   }
   const easingDuration = (config.easing as { duration?: number } | undefined)?.duration;
   return {
     duration: resolveDurationMs(config.duration, element, easingDuration ?? DEFAULT_DURATION),
-    easing: config.easing ? easingToCss(config.easing) : DEFAULT_EASING_CSS,
-    delay: config.delay ?? 0,
+    easing: easingToCss(config.easing),
+    delay,
   };
 };

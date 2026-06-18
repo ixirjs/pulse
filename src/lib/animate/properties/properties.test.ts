@@ -10,9 +10,9 @@ import {
   TRANSFORM_TEMPLATES,
   VAR_BIT,
   deregisterTransformAnimation,
-  ensurePropertiesRegistered,
   registerTransformAnimation,
 } from "./properties";
+import { ensurePropertiesRegistered } from "./transform-setup";
 
 // ---------------------------------------------------------------------------
 // PROPERTY_REGISTRY

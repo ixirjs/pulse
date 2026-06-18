@@ -2,16 +2,11 @@
  * Public types for the `animate()` library.
  */
 
-import type { EasingFn } from "$lib/shared/types";
+import type { EasingFn, MotionElement, SpringOptions } from "$lib/shared/types";
 
-export type { EasingFn };
+export type { EasingFn, MotionElement, SpringOptions };
 
-/**
- * Easing must be a pure function of `t ∈ [0, 1]` returning normalized
- * progress (typically `[0, 1]`, may overshoot for back/elastic curves).
- *
- * Import ready-made easings from `@parinvo/shared/.../animate/easings`.
- */
+/** Alias for {@link EasingFn}. Import ready-made easings from `@svelte-atoms/vibra/easing`. */
 export type Easing = EasingFn;
 
 /** WAAPI playback direction. */
@@ -30,22 +25,7 @@ export type AnimatableValue = number | string;
  * animate(el, { x: 200 }, { duration: (el) => el.offsetWidth * 0.8 });
  * ```
  */
-export type DurationFn = (element: HTMLElement | SVGElement) => number;
-
-export interface SpringOptions {
-  /** Stiffness of the spring (k). Default: 170. */
-  stiffness?: number;
-  /** Damping coefficient (c). Default: 26. */
-  damping?: number;
-  /** Mass of the body (m). Default: 1. */
-  mass?: number;
-  /** Initial velocity in target-units / second. Default: 0. */
-  velocity?: number;
-  /** Position delta below which the spring is considered at rest. Default: 0.001. */
-  restDelta?: number;
-  /** Velocity below which the spring is considered at rest. Default: 0.001. */
-  restSpeed?: number;
-}
+export type DurationFn = (element: MotionElement) => number;
 
 export type SpringInput = SpringOptions | true;
 

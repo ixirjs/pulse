@@ -4,9 +4,9 @@
  * Implementation lives in sibling modules; this file only re-exports.
  */
 
-export { animate } from "./animate";
-export { timeline } from "./timeline";
-export type { Timeline, TimelineDefaults, TimelinePosition } from "./timeline";
+export { animate } from "./core/animate";
+export { timeline } from "./timeline/timeline";
+export type { Timeline, TimelineDefaults, TimelinePosition } from "./timeline/timeline";
 export { spring } from "./spring";
 export type { Spring } from "./spring";
 export { cubicBezier, springEasing } from "../easing";

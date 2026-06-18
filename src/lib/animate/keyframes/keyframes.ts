@@ -3,20 +3,19 @@
  * effective timing so we issue a single WAAPI animation per timing bucket.
  */
 
-import { VAR_BIT, type PropDef } from "./properties";
-import type { AnimateDefaults, AnimateProps } from "./types";
-import { normalizeInput, resolveTiming, type ResolvedTiming } from "./normalize";
+import { VAR_BIT, type PropDef } from "../properties/properties";
+import type { AnimatableValue, AnimateDefaults, AnimateProps, MotionElement } from "../types";
+import { normalizeInput, resolveTiming } from "./normalize";
+import { isBrowser } from "$lib/shared/browser";
+import { isAutoKeyword, measureKeywordValue } from "./keyword";
 import {
   formatValue,
-  isAutoKeyword,
-  isBrowser,
-  measureKeywordValue,
   readCurrentValue,
   resolveProp,
-} from "./utils";
+} from "../properties/prop-utils";
 
 export interface KeyframeGroup {
-  timing: ResolvedTiming;
+  timing: { duration: number; easing: string; delay: number };
   keyframes: Record<string, [string, string]>;
 }
 
@@ -25,7 +24,7 @@ export interface CssWrite {
   value: string;
 }
 
-export interface BuiltKeyframes {
+interface BuiltKeyframes {
   groups: KeyframeGroup[];
   /** Inline styles to write once the animation finishes. */
   finalStyles: CssWrite[];
@@ -41,44 +40,36 @@ export interface BuiltKeyframes {
 }
 
 const resolveFrom = (
-  element: HTMLElement | SVGElement,
+  element: MotionElement,
   def: PropDef,
-  raw: unknown,
+  raw: AnimatableValue | undefined,
   computed: CSSStyleDeclaration | undefined,
 ): string => {
   if (raw == null) return readCurrentValue(element, def, computed);
-  if (def.measurable && isAutoKeyword(raw as string)) {
-    return measureKeywordValue(element, def, raw as string);
-  }
+  if (def.measurable && isAutoKeyword(raw)) return measureKeywordValue(element, def, raw);
   if (typeof raw === "number") return formatValue(raw, def);
-  return raw as string;
+  return raw;
 };
 
 /** Linear search over groups (typically 1-3 entries). Avoids hashing the
  *  potentially huge `linear(...)` easing string used in the previous Map key. */
 const findGroup = (
   groups: KeyframeGroup[],
-  timing: ResolvedTiming,
+  timing: KeyframeGroup["timing"],
 ): KeyframeGroup | undefined => {
-  for (let i = 0; i < groups.length; i++) {
-    const t = groups[i]!.timing;
-    if (
-      t.duration === timing.duration &&
-      t.delay === timing.delay &&
-      t.easing === timing.easing
-    ) {
-      return groups[i];
+  for (const group of groups) {
+    const t = group.timing;
+    if (t.duration === timing.duration && t.delay === timing.delay && t.easing === timing.easing) {
+      return group;
     }
   }
-  return undefined;
 };
 
 export const buildKeyframes = (
-  element: HTMLElement | SVGElement,
+  element: MotionElement,
   props: AnimateProps,
   defaults: AnimateDefaults,
 ): BuiltKeyframes => {
-  const keys = Object.keys(props);
   const groups: KeyframeGroup[] = [];
   const finalStyles: CssWrite[] = [];
   const restorations: CssWrite[] = [];
@@ -89,14 +80,11 @@ export const buildKeyframes = (
   // their `from` reads. Skipped entirely when every prop has an explicit `from`.
   let computed: CSSStyleDeclaration | undefined;
   const getComputed = (): CSSStyleDeclaration | undefined => {
-    if (computed) return computed;
     if (!isBrowser()) return undefined;
-    computed = window.getComputedStyle(element);
-    return computed;
+    return (computed ??= window.getComputedStyle(element));
   };
 
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i]!;
+  for (const key of Object.keys(props)) {
     const def = resolveProp(key);
     if (def.transform) {
       needsTransform = true;
@@ -104,21 +92,17 @@ export const buildKeyframes = (
     }
 
     const config = normalizeInput(props[key]!, defaults);
+    const { from, to } = config;
     const timing = resolveTiming(config, element);
 
-    const fromStr = resolveFrom(
-      element,
-      def,
-      config.from,
-      config.from == null ? getComputed() : undefined,
-    );
+    const fromStr = resolveFrom(element, def, from, from == null ? getComputed() : undefined);
 
     let toStr: string;
-    if (def.measurable && isAutoKeyword(config.to)) {
-      toStr = measureKeywordValue(element, def, config.to as string);
-      restorations.push({ css: def.css, value: config.to as string });
+    if (def.measurable && isAutoKeyword(to)) {
+      toStr = measureKeywordValue(element, def, to);
+      restorations.push({ css: def.css, value: to });
     } else {
-      toStr = formatValue(config.to, def);
+      toStr = formatValue(to, def);
     }
     finalStyles.push({ css: def.css, value: toStr });
 

@@ -28,6 +28,7 @@
  * ```
  */
 
+import { clamp01 } from "$lib/shared/math";
 import type { EasingFn } from "./types";
 
 export interface StaggerOptions {
@@ -65,17 +66,12 @@ export const stagger = (
     if (n === 1) return 0;
 
     // Resolve the origin as an absolute (possibly fractional) index.
-    let origin: number;
-    if (from === "start") {
-      origin = 0;
-    } else if (from === "end") {
-      origin = n - 1;
-    } else if (from === "center") {
-      origin = (n - 1) / 2;
-    } else {
+    const origin =
+      from === "start"  ? 0 :
+      from === "end"    ? n - 1 :
+      from === "center" ? (n - 1) / 2 :
       // Clamp a 0-1 normalized position into [0, n-1].
-      origin = Math.max(0, Math.min(1, from)) * (n - 1);
-    }
+      clamp01(from) * (n - 1);
 
     // Distance from this index to the origin, normalized to [0, 1] relative
     // to the farthest element so the maximum stagger = (maxDist * interval).

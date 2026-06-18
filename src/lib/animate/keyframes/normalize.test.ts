@@ -5,8 +5,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { normalizeInput, resolveTiming } from './normalize';
-import { springEasing } from '../easing';
-import type { AnimateDefaults, PropConfig } from './types';
+import { springEasing } from '../../easing';
+import type { AnimateDefaults, PropConfig } from '../types';
 
 const DEFAULTS: AnimateDefaults = {};
 

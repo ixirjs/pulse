@@ -4,7 +4,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { spring, getCachedSpring } from "./spring";
+import { spring } from "./spring";
+import { getCachedSpring } from "$lib/shared/spring-core";
 
 describe("spring()", () => {
   it("returns samples starting at 0 and ending at 1", () => {
