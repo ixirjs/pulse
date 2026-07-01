@@ -17,9 +17,9 @@ export const easeInOut: EasingFn = cubicBezier(0.42, 0, 0.58, 1);
  * easing name to a callable easing.
  */
 export const CSS_EASINGS: Readonly<Record<string, EasingFn>> = {
-  linear,
-  ease,
-  'ease-in': easeIn,
-  'ease-out': easeOut,
-  'ease-in-out': easeInOut,
+	linear,
+	ease,
+	'ease-in': easeIn,
+	'ease-out': easeOut,
+	'ease-in-out': easeInOut
 };

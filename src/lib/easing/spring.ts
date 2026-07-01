@@ -12,11 +12,11 @@ import { getCachedSpring, sampleAt } from '$lib/shared/spring-core';
  *    to skip the lossy 25-point resample done for generic easings.
  */
 export interface SpringEasingFn {
-  (t: number): number;
-  /** Natural settling duration in ms. */
-  readonly duration: number;
-  /** @internal Pre-built WAAPI linear(…) string at full simulation fidelity. */
-  readonly _linearEasing: string;
+	(t: number): number;
+	/** Natural settling duration in ms. */
+	readonly duration: number;
+	/** @internal Pre-built WAAPI linear(…) string at full simulation fidelity. */
+	readonly _linearEasing: string;
 }
 
 /**
@@ -24,8 +24,7 @@ export interface SpringEasingFn {
  * pre-built `_linearEasing` string (and therefore a natural `duration`) that
  * `springEasing()` attaches. Lets callers read those fields without a cast.
  */
-export const isSpringEasing = (fn: EasingFn): fn is SpringEasingFn =>
-  "_linearEasing" in fn;
+export const isSpringEasing = (fn: EasingFn): fn is SpringEasingFn => '_linearEasing' in fn;
 
 /**
  * Create a `SpringEasingFn` driven by spring physics.
@@ -59,7 +58,10 @@ export const isSpringEasing = (fn: EasingFn): fn is SpringEasingFn =>
  * ```
  */
 export const springEasing = (options: SpringOptions = {}): SpringEasingFn => {
-  const { spring: { samples, duration }, linearEasingCss } = getCachedSpring(options);
-  const fn = (t: number): number => sampleAt(samples, t);
-  return Object.assign(fn, { duration, _linearEasing: linearEasingCss });
+	const {
+		spring: { samples, duration },
+		linearEasingCss
+	} = getCachedSpring(options);
+	const fn = (t: number): number => sampleAt(samples, t);
+	return Object.assign(fn, { duration, _linearEasing: linearEasingCss });
 };
