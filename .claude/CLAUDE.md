@@ -1,0 +1,1 @@
+- after each fix or change do a global review of the change and how it is consistent with the codebase
