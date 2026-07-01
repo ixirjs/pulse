@@ -4,31 +4,31 @@
  * so isBrowser() is always false and prefersReducedMotion() always false.
  */
 
-import { describe, expect, it } from "vitest";
-import { isBrowser, prefersReducedMotion } from "./browser";
+import { describe, expect, it } from 'vitest';
+import { isBrowser, prefersReducedMotion } from './browser';
 
-describe("isBrowser()", () => {
-  it("returns false in node environment", () => {
-    expect(isBrowser()).toBe(false);
-  });
+describe('isBrowser()', () => {
+	it('returns false in node environment', () => {
+		expect(isBrowser()).toBe(false);
+	});
 
-  it("returns a boolean", () => {
-    expect(typeof isBrowser()).toBe("boolean");
-  });
+	it('returns a boolean', () => {
+		expect(typeof isBrowser()).toBe('boolean');
+	});
 });
 
-describe("prefersReducedMotion()", () => {
-  it("returns false in node environment (no matchMedia)", () => {
-    expect(prefersReducedMotion()).toBe(false);
-  });
+describe('prefersReducedMotion()', () => {
+	it('returns false in node environment (no matchMedia)', () => {
+		expect(prefersReducedMotion()).toBe(false);
+	});
 
-  it("returns a boolean", () => {
-    expect(typeof prefersReducedMotion()).toBe("boolean");
-  });
+	it('returns a boolean', () => {
+		expect(typeof prefersReducedMotion()).toBe('boolean');
+	});
 
-  it("calling it multiple times returns the same value", () => {
-    const a = prefersReducedMotion();
-    const b = prefersReducedMotion();
-    expect(a).toBe(b);
-  });
+	it('calling it multiple times returns the same value', () => {
+		const a = prefersReducedMotion();
+		const b = prefersReducedMotion();
+		expect(a).toBe(b);
+	});
 });
