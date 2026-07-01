@@ -4,30 +4,40 @@
  * Implementation lives in sibling modules; this file only re-exports.
  */
 
-export { animate } from "./core/animate";
-export { timeline } from "./timeline/timeline";
-export type { Timeline, TimelineDefaults, TimelinePosition } from "./timeline/timeline";
-export { spring } from "./spring";
-export type { Spring } from "./spring";
-export { cubicBezier, springEasing } from "../easing";
-export type { SpringEasingFn } from "../easing";
-export * as easings from "../easing";
-export { stagger } from "./stagger";
-export type { StaggerOptions } from "./stagger";
+export { animate } from './core/animate';
+export { timeline } from './timeline/timeline';
+export type { Timeline, TimelineDefaults, TimelinePosition } from './timeline/timeline';
+export { spring } from './spring';
+export type { Spring } from './spring';
+export { cubicBezier, springEasing } from '../easing';
+export type { SpringEasingFn } from '../easing';
+export * as easings from '../easing';
+export { stagger } from './stagger';
+export type { StaggerOptions } from './stagger';
 
-export { flipFromRect, flipToRect, captureRect } from "./flip";
-export type { FlipRect as AnimateFlipRect } from "./flip";
+export { motionPath } from './motion-path';
+export type { MotionPathOptions } from './motion-path';
+export { draw } from './draw';
+export type { DrawOptions } from './draw';
+export { createSpringValue } from './spring-value';
+export type { SpringValue, SpringValueOptions } from './spring-value';
+export { animateValue, countUp } from './animate-value';
+export type { AnimateValueOptions, CountUpOptions, ValueController } from './animate-value';
+
+export { flipFromRect, flipToRect, captureRect } from './flip';
+export type { FlipRect as AnimateFlipRect } from './flip';
 
 export type {
-  AnimatableValue,
-  AnimateDefaults,
-  AnimateProps,
-  AnimationController,
-  Easing,
-  EasingFn,
-  PlaybackDirection,
-  PropConfig,
-  PropInput,
-  SpringInput,
-  SpringOptions,
-} from "./types";
+	AnimatableValue,
+	AnimateDefaults,
+	AnimateProps,
+	AnimationController,
+	Easing,
+	EasingFn,
+	MotionElement,
+	PlaybackDirection,
+	PropConfig,
+	PropInput,
+	SpringInput,
+	SpringOptions
+} from './types';
