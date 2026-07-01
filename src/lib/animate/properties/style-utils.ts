@@ -13,20 +13,17 @@
 
 /** A captured inline style property — its value plus `!important` priority. */
 export interface SavedStyleProp {
-  value: string;
-  priority: string;
+	value: string;
+	priority: string;
 }
 
 /**
  * Capture an inline style property so it can be restored after a temporary
  * write (e.g. forcing a keyword to measure it, or suppressing a motion var).
  */
-export const saveStyleProp = (
-  style: CSSStyleDeclaration,
-  name: string,
-): SavedStyleProp => ({
-  value: style.getPropertyValue(name),
-  priority: style.getPropertyPriority(name),
+export const saveStyleProp = (style: CSSStyleDeclaration, name: string): SavedStyleProp => ({
+	value: style.getPropertyValue(name),
+	priority: style.getPropertyPriority(name)
 });
 
 /**
@@ -35,10 +32,10 @@ export const saveStyleProp = (
  * which also clears any temporary `!important` write.
  */
 export const restoreStyleProp = (
-  style: CSSStyleDeclaration,
-  name: string,
-  saved: SavedStyleProp,
+	style: CSSStyleDeclaration,
+	name: string,
+	saved: SavedStyleProp
 ): void => {
-  if (saved.value) style.setProperty(name, saved.value, saved.priority);
-  else style.removeProperty(name);
+	if (saved.value) style.setProperty(name, saved.value, saved.priority);
+	else style.removeProperty(name);
 };

@@ -5,33 +5,45 @@
  * converts JS values to CSS strings, and reads live computed values from the DOM.
  */
 
-import type { AnimatableValue, MotionElement } from "../types";
-import { PROPERTY_REGISTRY, type PropDef } from "./properties";
-import { isBrowser } from "$lib/shared/browser";
+import type { AnimatableValue, MotionElement } from '../types';
+import { PROPERTY_REGISTRY, type PropDef } from './properties';
+import { isBrowser } from '$lib/shared/browser';
 
 /**
  * Convert a possibly-numeric value to its CSS string form, applying the
  * default unit from the property registry when the value is purely numeric.
  */
 export const formatValue = (value: AnimatableValue, def: PropDef): string =>
-  typeof value === "number" ? `${value}${def.unit}` : value;
+	typeof value === 'number' ? `${value}${def.unit}` : value;
+
+/**
+ * Convert a CSS property name into the key form WAAPI keyframes require.
+ *
+ * `element.animate()` keyframe objects are keyed by **camelCased IDL names**;
+ * Chrome silently ignores hyphenated multi-word properties like
+ * `offset-distance` or `stroke-dashoffset` (they animate discretely / not at
+ * all). Single-word names are unchanged. Custom properties (`--motion-x`) must
+ * be passed verbatim — they have no camelCase IDL form — so they're left as-is.
+ */
+export const toKeyframeKey = (css: string): string =>
+	css.startsWith('--') ? css : css.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
 
 /** Cache passthrough PropDefs for unknown keys to avoid repeat regex/string work. */
-const UNKNOWN_PROP_CACHE: Record<string, PropDef> = Object.create(null) as Record<string, PropDef>;
+const UNKNOWN_PROP_CACHE = new Map<string, PropDef>();
 
 /**
  * Resolve the property definition for a given key. Unknown keys fall back to
  * a passthrough definition treating the key as a kebab-cased CSS property.
  */
 export const resolveProp = (key: string): PropDef => {
-  const known = PROPERTY_REGISTRY[key];
-  if (known) return known;
-  const cached = UNKNOWN_PROP_CACHE[key];
-  if (cached) return cached;
-  const css = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-  const def: PropDef = { css, unit: "", initial: "" };
-  UNKNOWN_PROP_CACHE[key] = def;
-  return def;
+	const known = PROPERTY_REGISTRY[key];
+	if (known) return known;
+	const cached = UNKNOWN_PROP_CACHE.get(key);
+	if (cached) return cached;
+	const css = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+	const def: PropDef = { css, unit: '', initial: '' };
+	UNKNOWN_PROP_CACHE.set(key, def);
+	return def;
 };
 
 // Matches a value that WAAPI can interpolate (a number followed by a CSS unit
@@ -49,16 +61,16 @@ const ANIMATABLE_VALUE_RE = /^-?\d*\.?\d+(px|%|em|rem|vh|vw|vmin|vmax|deg|rad|tu
  * the corresponding axis of `getBoundingClientRect()` is used instead.
  */
 export const readCurrentValue = (
-  element: MotionElement,
-  def: PropDef,
-  computed?: CSSStyleDeclaration,
+	element: MotionElement,
+	def: PropDef,
+	computed?: CSSStyleDeclaration
 ): string => {
-  if (!isBrowser()) return def.initial;
-  const style = computed ?? window.getComputedStyle(element);
-  const raw = style.getPropertyValue(def.css).trim();
-  if (!raw) return def.initial;
-  if (def.sizeDimension && !ANIMATABLE_VALUE_RE.test(raw)) {
-    return `${element.getBoundingClientRect()[def.sizeDimension]}px`;
-  }
-  return raw;
+	if (!isBrowser()) return def.initial;
+	const style = computed ?? window.getComputedStyle(element);
+	const raw = style.getPropertyValue(def.css).trim();
+	if (!raw) return def.initial;
+	if (def.sizeDimension && !ANIMATABLE_VALUE_RE.test(raw)) {
+		return `${element.getBoundingClientRect()[def.sizeDimension]}px`;
+	}
+	return raw;
 };
