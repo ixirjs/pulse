@@ -3,62 +3,59 @@
  * and own the lifecycle hooks (`onStart` / `onEnd`) plus inline-style cleanup.
  */
 
-import { isBrowser } from "$lib/shared/browser";
-import type { AnimateDefaults, AnimationController, MotionElement } from "../types";
-import type { CssWrite } from "../keyframes/keyframes";
+import { isBrowser } from '$lib/shared/browser';
+import type { AnimateDefaults, AnimationController, MotionElement } from '../types';
+import type { CssWrite } from '../keyframes/keyframes';
 
 const NOOP = (): void => {};
 const EMPTY_ANIMATIONS: readonly Animation[] = Object.freeze([]);
 
 export const noopController = (
-  element: Element,
-  defaults: AnimateDefaults,
+	element: Element,
+	defaults: AnimateDefaults
 ): AnimationController => {
-  defaults.onStart?.(element);
-  defaults.onEnd?.(element, { finished: true });
-  return {
-    animations: EMPTY_ANIMATIONS,
-    finished: Promise.resolve(),
-    currentTime: null,
-    playbackRate: 1,
-    cancel: NOOP,
-    stop: NOOP,
-    pause: NOOP,
-    play: NOOP,
-    reverse: NOOP,
-    seek: NOOP,
-  };
+	defaults.onStart?.(element);
+	defaults.onEnd?.(element, { finished: true });
+	return {
+		animations: EMPTY_ANIMATIONS,
+		finished: Promise.resolve(),
+		currentTime: null,
+		playbackRate: 1,
+		cancel: NOOP,
+		stop: NOOP,
+		pause: NOOP,
+		play: NOOP,
+		reverse: NOOP,
+		seek: NOOP
+	};
 };
 
 interface ControllerOptions {
-  element: MotionElement;
-  animations: Animation[];
-  defaults: AnimateDefaults;
-  finalStyles: ReadonlyArray<CssWrite>;
-  restorations: ReadonlyArray<CssWrite>;
-  onTeardown?: () => void;
+	element: MotionElement;
+	animations: Animation[];
+	defaults: AnimateDefaults;
+	finalStyles: ReadonlyArray<CssWrite>;
+	restorations: ReadonlyArray<CssWrite>;
+	onTeardown?: () => void;
 }
 
-const writeStyles = (
-  style: CSSStyleDeclaration,
-  writes: ReadonlyArray<CssWrite>,
-): void => {
-  // Single setProperty per write — no intermediate getComputedStyle, no
-  // commitStyles(), no allocation per entry. Invalidations within the same
-  // micro-task are coalesced by the engine.
-  for (const { css, value } of writes) style.setProperty(css, value);
+const writeStyles = (style: CSSStyleDeclaration, writes: ReadonlyArray<CssWrite>): void => {
+	// Single setProperty per write — no intermediate getComputedStyle, no
+	// commitStyles(), no allocation per entry. Invalidations within the same
+	// micro-task are coalesced by the engine.
+	for (const { css, value } of writes) style.setProperty(css, value);
 };
 
 const applyFinalStyles = (
-  element: MotionElement,
-  finalStyles: ReadonlyArray<CssWrite>,
-  restorations: ReadonlyArray<CssWrite>,
+	element: MotionElement,
+	finalStyles: ReadonlyArray<CssWrite>,
+	restorations: ReadonlyArray<CssWrite>
 ): void => {
-  const style = element.style;
-  writeStyles(style, finalStyles);
-  // Restorations run last so auto-keywords override their measured px values,
-  // keeping the element responsive to layout changes.
-  writeStyles(style, restorations);
+	const style = element.style;
+	writeStyles(style, finalStyles);
+	// Restorations run last so auto-keywords override their measured px values,
+	// keeping the element responsive to layout changes.
+	writeStyles(style, restorations);
 };
 
 /**
@@ -69,107 +66,132 @@ const applyFinalStyles = (
  * reliable where `commitStyles()` is not.
  */
 const commitComputedStyles = (
-  element: MotionElement,
-  finalStyles: ReadonlyArray<CssWrite>,
+	element: MotionElement,
+	finalStyles: ReadonlyArray<CssWrite>
 ): void => {
-  const computed = window.getComputedStyle(element);
-  const style = element.style;
-  for (const { css } of finalStyles) {
-    const val = computed.getPropertyValue(css).trim();
-    if (val) style.setProperty(css, val);
-  }
+	const computed = window.getComputedStyle(element);
+	const style = element.style;
+	for (const { css } of finalStyles) {
+		const val = computed.getPropertyValue(css).trim();
+		if (val) style.setProperty(css, val);
+	}
 };
 
 export const createController = ({
-  element,
-  animations,
-  defaults,
-  finalStyles,
-  restorations,
-  onTeardown,
+	element,
+	animations,
+	defaults,
+	finalStyles,
+	restorations,
+	onTeardown
 }: ControllerOptions): AnimationController => {
-  defaults.onStart?.(element);
+	defaults.onStart?.(element);
 
-  const forEachAnim = (fn: (a: Animation) => void): void => {
-    for (const anim of animations) fn(anim);
-  };
-  const cancelAnimations = (): void => forEachAnim(a => a.cancel());
-  // All timing buckets share the same clock, so the first animation represents
-  // the group for currentTime / playbackRate reads.
-  const primaryAnimation = animations[0];
+	const forEachAnim = (fn: (a: Animation) => void): void => {
+		for (const anim of animations) fn(anim);
+	};
+	const cancelAnimations = (): void => forEachAnim((a) => a.cancel());
+	// All timing buckets share the same clock, so the first animation represents
+	// the group for currentTime / playbackRate reads.
+	const primaryAnimation = animations[0];
 
-  let finalized = false;
-  const finalize = (): void => {
-    if (finalized) return;
-    finalized = true;
-    // We don't call commitStyles() because the applyFinalStyles() call below
-    // writes the same end-state we'd commit (and avoids an extra forced style
-    // resolution per animation).
-    cancelAnimations();
-    applyFinalStyles(element, finalStyles, restorations);
-    onTeardown?.();
-  };
+	// Optional per-frame progress loop. WAAPI doesn't call JS each frame, so when
+	// `onUpdate` is supplied we run our own rAF, reading the live timing progress
+	// off the primary animation. Stopped by both finalize() and teardown().
+	let rafId = 0;
+	const stopRaf = (): void => {
+		if (rafId) {
+			cancelAnimationFrame(rafId);
+			rafId = 0;
+		}
+	};
+	const startRaf = (): void => {
+		const onUpdate = defaults.onUpdate;
+		if (!onUpdate || !isBrowser() || !primaryAnimation) return;
+		const tick = (): void => {
+			const progress = primaryAnimation.effect?.getComputedTiming().progress ?? 1;
+			onUpdate(progress, element);
+			rafId = requestAnimationFrame(tick);
+		};
+		rafId = requestAnimationFrame(tick);
+	};
 
-  // Build the aggregate finished promise lazily — many animations are
-  // fire-and-forget, and accessing `a.finished` allocates one Promise per
-  // underlying Animation which is wasted when the caller never awaits.
-  let finishedPromise: Promise<void> | undefined;
-  const getFinished = (): Promise<void> => {
-    if (finishedPromise) return finishedPromise;
-    if (animations.length === 0) return (finishedPromise = Promise.resolve());
-    return (finishedPromise = Promise.all(animations.map(a => a.finished)).then(
-      () => {
-        finalize();
-        defaults.onEnd?.(element, { finished: true });
-      },
-      (err) => {
-        // Don't run finalize on cancel — `cancel()` already did. Still fire
-        // onEnd so callers get a consistent signal, and rethrow so awaiters
-        // can observe the abort.
-        defaults.onEnd?.(element, { finished: false });
-        throw err;
-      },
-    ));
-  };
+	let finalized = false;
+	const finalize = (): void => {
+		if (finalized) return;
+		finalized = true;
+		stopRaf();
+		// We don't call commitStyles() because the applyFinalStyles() call below
+		// writes the same end-state we'd commit (and avoids an extra forced style
+		// resolution per animation).
+		cancelAnimations();
+		applyFinalStyles(element, finalStyles, restorations);
+		onTeardown?.();
+	};
 
-  const teardown = (): void => {
-    cancelAnimations();
-    onTeardown?.();
-  };
+	// Build the aggregate finished promise lazily — many animations are
+	// fire-and-forget, and accessing `a.finished` allocates one Promise per
+	// underlying Animation which is wasted when the caller never awaits.
+	let finishedPromise: Promise<void> | undefined;
+	const getFinished = (): Promise<void> => {
+		if (finishedPromise) return finishedPromise;
+		if (animations.length === 0) return (finishedPromise = Promise.resolve());
+		return (finishedPromise = Promise.all(animations.map((a) => a.finished)).then(
+			() => {
+				finalize();
+				defaults.onEnd?.(element, { finished: true });
+			},
+			(err) => {
+				// Don't run finalize on cancel — `cancel()` already did. Still fire
+				// onEnd so callers get a consistent signal, and rethrow so awaiters
+				// can observe the abort.
+				defaults.onEnd?.(element, { finished: false });
+				throw err;
+			}
+		));
+	};
 
-  // Eagerly subscribe so onEnd still fires for fire-and-forget callers; the
-  // unhandled-rejection on cancel is suppressed by attaching a no-op .catch.
-  getFinished().catch(NOOP);
+	const teardown = (): void => {
+		stopRaf();
+		cancelAnimations();
+		onTeardown?.();
+	};
 
-  return {
-    animations,
-    get finished() {
-      return getFinished();
-    },
-    get currentTime(): number | null {
-      const t = primaryAnimation?.currentTime;
-      return typeof t === "number" ? t : null;
-    },
-    get playbackRate(): number {
-      return primaryAnimation?.playbackRate ?? 1;
-    },
-    set playbackRate(rate: number) {
-      forEachAnim(a => (a.playbackRate = rate));
-    },
-    cancel: teardown,
-    stop: () => {
-      if (isBrowser()) commitComputedStyles(element, finalStyles);
-      teardown();
-    },
-    pause: () => forEachAnim(a => a.pause()),
-    play: () => forEachAnim(a => a.play()),
-    reverse: () => forEachAnim(a => a.reverse()),
-    seek: (timeMs: number) => forEachAnim(a => {
-      try {
-        a.currentTime = timeMs;
-      } catch {
-        // Animation may have been cancelled — ignore.
-      }
-    }),
-  };
+	// Eagerly subscribe so onEnd still fires for fire-and-forget callers; the
+	// unhandled-rejection on cancel is suppressed by attaching a no-op .catch.
+	getFinished().catch(NOOP);
+	startRaf();
+
+	return {
+		animations,
+		get finished() {
+			return getFinished();
+		},
+		get currentTime(): number | null {
+			const t = primaryAnimation?.currentTime;
+			return typeof t === 'number' ? t : null;
+		},
+		get playbackRate(): number {
+			return primaryAnimation?.playbackRate ?? 1;
+		},
+		set playbackRate(rate: number) {
+			forEachAnim((a) => (a.playbackRate = rate));
+		},
+		cancel: teardown,
+		stop: () => {
+			if (isBrowser()) commitComputedStyles(element, finalStyles);
+			teardown();
+		},
+		pause: () => forEachAnim((a) => a.pause()),
+		play: () => forEachAnim((a) => a.play()),
+		reverse: () => forEachAnim((a) => a.reverse()),
+		seek: (timeMs: number) =>
+			forEachAnim((a) => {
+				try {
+					a.currentTime = timeMs;
+				} catch {
+					// Animation may have been cancelled — ignore.
+				}
+			})
+	};
 };
