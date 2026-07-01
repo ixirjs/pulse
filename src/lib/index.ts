@@ -11,3 +11,11 @@
  */
 export * from './flip';
 export * from './animate';
+export * from './scroll';
+export * from './gestures';
+export * from './presence';
+export * from './variants';
+export * from './gradient';
+export * from './morph';
+export * from './text';
+export * from './view-transition';

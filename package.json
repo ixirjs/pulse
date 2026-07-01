@@ -76,6 +76,38 @@
 		"./easing": {
 			"types": "./dist/easing/index.d.ts",
 			"default": "./dist/easing/index.js"
+		},
+		"./scroll": {
+			"types": "./dist/scroll/index.d.ts",
+			"default": "./dist/scroll/index.js"
+		},
+		"./gestures": {
+			"types": "./dist/gestures/index.d.ts",
+			"default": "./dist/gestures/index.js"
+		},
+		"./presence": {
+			"types": "./dist/presence/index.d.ts",
+			"default": "./dist/presence/index.js"
+		},
+		"./variants": {
+			"types": "./dist/variants/index.d.ts",
+			"default": "./dist/variants/index.js"
+		},
+		"./gradient": {
+			"types": "./dist/gradient/index.d.ts",
+			"default": "./dist/gradient/index.js"
+		},
+		"./morph": {
+			"types": "./dist/morph/index.d.ts",
+			"default": "./dist/morph/index.js"
+		},
+		"./text": {
+			"types": "./dist/text/index.d.ts",
+			"default": "./dist/text/index.js"
+		},
+		"./view-transition": {
+			"types": "./dist/view-transition/index.d.ts",
+			"default": "./dist/view-transition/index.js"
 		}
 	},
 	"peerDependencies": {
