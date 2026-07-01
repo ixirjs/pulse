@@ -6,35 +6,41 @@
  * stateful materialization machinery.
  */
 
-import type { AnimatableValue, AnimateDefaults, AnimateProps, MotionElement, PropInput } from "../types";
-import { isPropConfig, normalizeInput, resolveTiming, tupleToConfig } from "../keyframes/normalize";
+import type {
+	AnimatableValue,
+	AnimateDefaults,
+	AnimateProps,
+	MotionElement,
+	PropInput
+} from '../types';
+import { isPropConfig, normalizeInput, resolveTiming, tupleToConfig } from '../keyframes/normalize';
 
 // ---------------------------------------------------------------------------
 // Entry shapes
 // ---------------------------------------------------------------------------
 
 interface BaseEntry {
-  start: number;
-  end: number;
+	start: number;
+	end: number;
 }
 
 interface ElementEntry extends BaseEntry {
-  element: MotionElement;
-  props: AnimateProps;
+	element: MotionElement;
+	props: AnimateProps;
 }
 
 export interface AnimateEntry extends ElementEntry {
-  readonly kind: "animate";
-  options: AnimateDefaults;
+	readonly kind: 'animate';
+	options: AnimateDefaults;
 }
 
 export interface SetEntry extends ElementEntry {
-  readonly kind: "set";
+	readonly kind: 'set';
 }
 
 export interface CallEntry extends BaseEntry {
-  readonly kind: "call";
-  callback: () => void;
+	readonly kind: 'call';
+	callback: () => void;
 }
 
 export type Entry = AnimateEntry | SetEntry | CallEntry;
@@ -49,17 +55,17 @@ export type Entry = AnimateEntry | SetEntry | CallEntry;
  * via the same `resolveTiming()` the runtime uses, so the value is exact.
  */
 export const computeAnimateDuration = (
-  element: MotionElement,
-  props: AnimateProps,
-  defaults: AnimateDefaults,
+	element: MotionElement,
+	props: AnimateProps,
+	defaults: AnimateDefaults
 ): number => {
-  let max = 0;
-  for (const key of Object.keys(props)) {
-    const config = normalizeInput(props[key]!, defaults);
-    const t = resolveTiming(config, element);
-    max = Math.max(max, t.duration + t.delay);
-  }
-  return max;
+	let max = 0;
+	for (const key of Object.keys(props)) {
+		const config = normalizeInput(props[key]!, defaults);
+		const t = resolveTiming(config, element);
+		max = Math.max(max, t.duration + t.delay);
+	}
+	return max;
 };
 
 // ---------------------------------------------------------------------------
@@ -73,22 +79,22 @@ export const computeAnimateDuration = (
  * its own delay value.
  */
 export const offsetProps = (
-  props: AnimateProps,
-  defaults: AnimateDefaults,
-  offset: number,
+	props: AnimateProps,
+	defaults: AnimateDefaults,
+	offset: number
 ): AnimateProps => {
-  if (offset === 0) return props;
-  const baseDelay = (defaults.delay ?? 0) + offset;
-  const out: Record<string, PropInput> = {};
-  for (const key of Object.keys(props)) {
-    const raw = props[key]!;
-    if (Array.isArray(raw)) {
-      out[key] = { ...tupleToConfig(raw), delay: baseDelay };
-    } else if (isPropConfig(raw)) {
-      out[key] = { ...raw, delay: (raw.delay ?? defaults.delay ?? 0) + offset };
-    } else {
-      out[key] = { to: raw as AnimatableValue, delay: baseDelay };
-    }
-  }
-  return out;
+	if (offset === 0) return props;
+	const baseDelay = (defaults.delay ?? 0) + offset;
+	const out: Record<string, PropInput> = {};
+	for (const key of Object.keys(props)) {
+		const raw = props[key]!;
+		if (Array.isArray(raw)) {
+			out[key] = { ...tupleToConfig(raw), delay: baseDelay };
+		} else if (isPropConfig(raw)) {
+			out[key] = { ...raw, delay: (raw.delay ?? defaults.delay ?? 0) + offset };
+		} else {
+			out[key] = { to: raw as AnimatableValue, delay: baseDelay };
+		}
+	}
+	return out;
 };

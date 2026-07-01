@@ -33,17 +33,17 @@
  * ```
  */
 
-import { animate } from "../core/animate";
-import type { AnimationController } from "../types";
-import { type Anchor, resolvePosition } from "./timeline-position";
+import { animate } from '../core/animate';
+import type { AnimationController } from '../types';
+import { type Anchor, resolvePosition } from './timeline-position';
 import {
-  type Entry,
-  type SetEntry,
-  computeAnimateDuration,
-  offsetProps,
-} from "./timeline-internals";
-import { isBrowser } from "$lib/shared/browser";
-import type { Timeline, TimelineDefaults, TimelinePosition } from "./timeline-types";
+	type Entry,
+	type SetEntry,
+	computeAnimateDuration,
+	offsetProps
+} from './timeline-internals';
+import { isBrowser } from '$lib/shared/browser';
+import type { Timeline, TimelineDefaults, TimelinePosition } from './timeline-types';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -55,243 +55,257 @@ export type { Timeline, TimelineDefaults, TimelinePosition };
 // Timeline factory
 // ---------------------------------------------------------------------------
 
+const EMPTY_ANIMATIONS: readonly Animation[] = Object.freeze([]);
 
 export const timeline = (defaults: TimelineDefaults = {}): Timeline => {
-  const { paused = false, ...animateDefaults } = defaults;
-  const entries: Entry[] = [];
-  const labels = new Map<string, number>();
-  const anchor: Anchor = { duration: 0, lastStart: 0, lastEnd: 0, labels };
+	const { paused = false, ...animateDefaults } = defaults;
+	const entries: Entry[] = [];
+	const labels = new Map<string, number>();
+	const anchor: Anchor = { duration: 0, lastStart: 0, lastEnd: 0, labels };
 
-  // Materialization state.
-  let materialized = false;
-  const controllers: AnimationController[] = [];
-  let timeoutHandles: ReturnType<typeof setTimeout>[] = [];
-  let cachedAnimations: readonly Animation[] | undefined;
-  let cancelled = false;
+	// Materialization state.
+	let materialized = false;
+	const controllers: AnimationController[] = [];
+	let timeoutHandles: ReturnType<typeof setTimeout>[] = [];
+	let cachedAnimations: readonly Animation[] | undefined;
+	let cancelled = false;
 
-  // Aggregate finished promise, lazily built (mirrors `controller.ts` style).
-  let finishedPromise: Promise<void> | undefined;
+	// Aggregate finished promise, lazily built (mirrors `controller.ts` style).
+	let finishedPromise: Promise<void> | undefined;
 
-  const updateAnchor = (entry: Entry): void => {
-    anchor.lastStart = entry.start;
-    anchor.lastEnd = entry.end;
-    if (entry.end > anchor.duration) anchor.duration = entry.end;
-  };
+	const updateAnchor = (entry: Entry): void => {
+		anchor.lastStart = entry.start;
+		anchor.lastEnd = entry.end;
+		if (entry.end > anchor.duration) anchor.duration = entry.end;
+	};
 
-  const ensureNotMaterialized = (op: string): void => {
-    if (materialized) {
-      throw new Error(
-        `[timeline] Cannot call .${op}() after the timeline has started. ` +
-          `Build the full timeline before play()/finished/animations.`,
-      );
-    }
-  };
+	const ensureNotMaterialized = (op: string): void => {
+		if (materialized) {
+			throw new Error(
+				`[timeline] Cannot call .${op}() after the timeline has started. ` +
+					`Build the full timeline before play()/finished/animations.`
+			);
+		}
+	};
 
-  // -------------------------------------------------------------------------
-  // Materialization
-  // -------------------------------------------------------------------------
+	// -------------------------------------------------------------------------
+	// Materialization
+	// -------------------------------------------------------------------------
 
-  // Fire synchronously when startMs <= 0 (matches animate()'s reduced-motion
-  // fast-path), otherwise schedule via setTimeout and track the handle.
-  const scheduleAt = (startMs: number, fn: () => void): void => {
-    if (startMs <= 0) fn();
-    else timeoutHandles.push(setTimeout(fn, startMs));
-  };
+	// Fire synchronously when startMs <= 0 (matches animate()'s reduced-motion
+	// fast-path), otherwise schedule via setTimeout and track the handle.
+	const scheduleAt = (startMs: number, fn: () => void): void => {
+		if (startMs <= 0) fn();
+		else timeoutHandles.push(setTimeout(fn, startMs));
+	};
 
-  const materialize = (): void => {
-    if (materialized) return;
-    materialized = true;
-    if (!isBrowser()) return;
+	const materialize = (): void => {
+		if (materialized) return;
+		materialized = true;
+		if (!isBrowser()) return;
 
-    for (const entry of entries) {
-      if (entry.kind === "animate") {
-        controllers.push(animate(
-          entry.element,
-          offsetProps(entry.props, entry.options, entry.start),
-          entry.options,
-        ));
-      } else if (entry.kind === "set") {
-        scheduleAt(entry.start, () => applySetEntry(entry));
-      } else {
-        scheduleAt(entry.start, () => {
-          try { entry.callback(); } catch (e) { reportError(e); }
-        });
-      }
-    }
+		for (const entry of entries) {
+			if (entry.kind === 'animate') {
+				controllers.push(
+					animate(
+						entry.element,
+						offsetProps(entry.props, entry.options, entry.start),
+						entry.options
+					)
+				);
+			} else if (entry.kind === 'set') {
+				scheduleAt(entry.start, () => applySetEntry(entry));
+			} else {
+				scheduleAt(entry.start, () => {
+					try {
+						entry.callback();
+					} catch (e) {
+						reportError(e);
+					}
+				});
+			}
+		}
 
-    cachedAnimations = controllers.flatMap(c => c.animations);
+		cachedAnimations = controllers.flatMap((c) => c.animations);
 
-    // Apply any pre-materialization rate through the same controller setter the
-    // live setPlaybackRate() uses, so playback-rate changes have one code path.
-    if (pendingPlaybackRate !== undefined) {
-      const rate = pendingPlaybackRate;
-      forEachCtrl(c => (c.playbackRate = rate));
-    }
-  };
+		// Apply any pre-materialization rate through the same controller setter the
+		// live setPlaybackRate() uses, so playback-rate changes have one code path.
+		if (pendingPlaybackRate !== undefined) {
+			const rate = pendingPlaybackRate;
+			forEachCtrl((c) => (c.playbackRate = rate));
+		}
+	};
 
-  const applySetEntry = (entry: SetEntry): void => {
-    // Use a 0-duration `animate()` call so transform wiring + property
-    // registration go through the same pipeline as a normal animation.
-    animate(entry.element, entry.props, { duration: 0, fill: "forwards" });
-  };
+	const applySetEntry = (entry: SetEntry): void => {
+		// Use a 0-duration `animate()` call so transform wiring + property
+		// registration go through the same pipeline as a normal animation.
+		animate(entry.element, entry.props, { duration: 0, fill: 'forwards' });
+	};
 
-  const reportError = (err: unknown): void => {
-    // Match the WAAPI behaviour: callback errors should not break the timeline.
-    queueMicrotask(() => {
-      throw err;
-    });
-  };
+	const reportError = (err: unknown): void => {
+		// Match the WAAPI behaviour: callback errors should not break the timeline.
+		queueMicrotask(() => {
+			throw err;
+		});
+	};
 
-  // -------------------------------------------------------------------------
-  // Auto-play scheduling
-  // -------------------------------------------------------------------------
+	// -------------------------------------------------------------------------
+	// Auto-play scheduling
+	// -------------------------------------------------------------------------
 
-  // We defer auto-play to a microtask so the caller can finish chaining
-  // `.add(...).add(...)` synchronously before anything starts.
-  let autoPlayScheduled = false;
-  const scheduleAutoPlay = (): void => {
-    if (paused || autoPlayScheduled || materialized || !isBrowser()) return;
-    autoPlayScheduled = true;
-    queueMicrotask(() => {
-      if (!materialized && !cancelled) materialize();
-    });
-  };
+	// We defer auto-play to a microtask so the caller can finish chaining
+	// `.add(...).add(...)` synchronously before anything starts.
+	let autoPlayScheduled = false;
+	const scheduleAutoPlay = (): void => {
+		if (paused || autoPlayScheduled || materialized || !isBrowser()) return;
+		autoPlayScheduled = true;
+		queueMicrotask(() => {
+			if (!materialized && !cancelled) materialize();
+		});
+	};
 
-  // -------------------------------------------------------------------------
-  // Builder methods
-  // -------------------------------------------------------------------------
+	// -------------------------------------------------------------------------
+	// Builder methods
+	// -------------------------------------------------------------------------
 
-  const pushEntry = (entry: Entry): Timeline => {
-    entries.push(entry);
-    updateAnchor(entry);
-    scheduleAutoPlay();
-    return api;
-  };
+	const pushEntry = (entry: Entry): Timeline => {
+		entries.push(entry);
+		updateAnchor(entry);
+		scheduleAutoPlay();
+		return api;
+	};
 
-  // Guard against post-materialization mutation, then resolve the entry's
-  // start time. Shared opening step of every builder method.
-  const resolveStart = (op: string, position: TimelinePosition): number => {
-    ensureNotMaterialized(op);
-    return resolvePosition(position, anchor);
-  };
+	// Guard against post-materialization mutation, then resolve the entry's
+	// start time. Shared opening step of every builder method.
+	const resolveStart = (op: string, position: TimelinePosition): number => {
+		ensureNotMaterialized(op);
+		return resolvePosition(position, anchor);
+	};
 
-  const add: Timeline["add"] = (element, props, options, position) => {
-    const start = resolveStart("add", position);
-    const merged = options ? { ...animateDefaults, ...options } : animateDefaults;
-    const length = computeAnimateDuration(element, props, merged);
-    return pushEntry({ kind: "animate", start, end: start + length, element, props, options: merged });
-  };
+	const add: Timeline['add'] = (element, props, options, position) => {
+		const start = resolveStart('add', position);
+		const merged = options ? { ...animateDefaults, ...options } : animateDefaults;
+		const length = computeAnimateDuration(element, props, merged);
+		return pushEntry({
+			kind: 'animate',
+			start,
+			end: start + length,
+			element,
+			props,
+			options: merged
+		});
+	};
 
-  const setEntry: Timeline["set"] = (element, props, position) => {
-    const start = resolveStart("set", position);
-    return pushEntry({ kind: "set", start, end: start, element, props });
-  };
+	const setEntry: Timeline['set'] = (element, props, position) => {
+		const start = resolveStart('set', position);
+		return pushEntry({ kind: 'set', start, end: start, element, props });
+	};
 
-  const call: Timeline["call"] = (callback, position) => {
-    const start = resolveStart("call", position);
-    return pushEntry({ kind: "call", start, end: start, callback });
-  };
+	const call: Timeline['call'] = (callback, position) => {
+		const start = resolveStart('call', position);
+		return pushEntry({ kind: 'call', start, end: start, callback });
+	};
 
-  const label: Timeline["label"] = (name, position) => {
-    labels.set(name, resolveStart("label", position));
-    return api;
-  };
+	const label: Timeline['label'] = (name, position) => {
+		labels.set(name, resolveStart('label', position));
+		return api;
+	};
 
-  // -------------------------------------------------------------------------
-  // Playback controls
-  // -------------------------------------------------------------------------
+	// -------------------------------------------------------------------------
+	// Playback controls
+	// -------------------------------------------------------------------------
 
-  const forEachCtrl = (fn: (c: AnimationController) => void): void => {
-    for (const ctrl of controllers) fn(ctrl);
-  };
+	const forEachCtrl = (fn: (c: AnimationController) => void): void => {
+		for (const ctrl of controllers) fn(ctrl);
+	};
 
-  // Materialize the timeline (so paused/seeked timelines stay inspectable for
-  // duration/animations), apply `op` to every controller, then return the
-  // chainable api. Shared by pause/reverse/seek.
-  const materializeThen = (op: (c: AnimationController) => void): Timeline => {
-    materialize();
-    forEachCtrl(op);
-    return api;
-  };
+	// Materialize the timeline (so paused/seeked timelines stay inspectable for
+	// duration/animations), apply `op` to every controller, then return the
+	// chainable api. Shared by pause/reverse/seek.
+	const materializeThen = (op: (c: AnimationController) => void): Timeline => {
+		materialize();
+		forEachCtrl(op);
+		return api;
+	};
 
-  const play: Timeline["play"] = () => {
-    if (cancelled) return api;
-    if (!materialized) {
-      materialize();
-    } else {
-      forEachCtrl(c => c.play());
-    }
-    return api;
-  };
+	const play: Timeline['play'] = () => {
+		if (cancelled) return api;
+		if (!materialized) {
+			materialize();
+		} else {
+			forEachCtrl((c) => c.play());
+		}
+		return api;
+	};
 
-  const pause: Timeline["pause"] = () => materializeThen(c => c.pause());
+	const pause: Timeline['pause'] = () => materializeThen((c) => c.pause());
 
-  const reverse: Timeline["reverse"] = () => materializeThen(c => c.reverse());
+	const reverse: Timeline['reverse'] = () => materializeThen((c) => c.reverse());
 
-  const clearTimeouts = (): void => {
-    for (const h of timeoutHandles) clearTimeout(h);
-    timeoutHandles = [];
-  };
+	const clearTimeouts = (): void => {
+		for (const h of timeoutHandles) clearTimeout(h);
+		timeoutHandles = [];
+	};
 
-  const shutdown = (op: (c: AnimationController) => void): void => {
-    cancelled = true;
-    forEachCtrl(op);
-    clearTimeouts();
-  };
+	const shutdown = (op: (c: AnimationController) => void): void => {
+		cancelled = true;
+		forEachCtrl(op);
+		clearTimeouts();
+	};
 
-  const cancel: Timeline["cancel"] = () => shutdown(c => c.cancel());
-  const stop: Timeline["stop"] = () => shutdown(c => c.stop());
+	const cancel: Timeline['cancel'] = () => shutdown((c) => c.cancel());
+	const stop: Timeline['stop'] = () => shutdown((c) => c.stop());
 
-  const seek: Timeline["seek"] = (timeMs) => materializeThen(c => c.seek(timeMs));
+	const seek: Timeline['seek'] = (timeMs) => materializeThen((c) => c.seek(timeMs));
 
-  // Pre-materialization rate is stored and applied to each animation on materialize.
-  let pendingPlaybackRate: number | undefined;
+	// Pre-materialization rate is stored and applied to each animation on materialize.
+	let pendingPlaybackRate: number | undefined;
 
-  const setPlaybackRate: Timeline["setPlaybackRate"] = (rate) => {
-    if (materialized) {
-      forEachCtrl(c => (c.playbackRate = rate));
-    } else {
-      pendingPlaybackRate = rate;
-    }
-    return api;
-  };
+	const setPlaybackRate: Timeline['setPlaybackRate'] = (rate) => {
+		if (materialized) {
+			forEachCtrl((c) => (c.playbackRate = rate));
+		} else {
+			pendingPlaybackRate = rate;
+		}
+		return api;
+	};
 
-  // -------------------------------------------------------------------------
-  // Aggregate `finished`
-  // -------------------------------------------------------------------------
+	// -------------------------------------------------------------------------
+	// Aggregate `finished`
+	// -------------------------------------------------------------------------
 
-  const buildFinished = (): Promise<void> => {
-    materialize();
-    if (controllers.length === 0) return Promise.resolve();
-    return Promise.all(controllers.map(c => c.finished)).then(() => {});
-  };
+	const buildFinished = (): Promise<void> => {
+		materialize();
+		if (controllers.length === 0) return Promise.resolve();
+		return Promise.all(controllers.map((c) => c.finished)).then(() => {});
+	};
 
-  const api: Timeline = {
-    add,
-    set: setEntry,
-    call,
-    label,
-    get duration() {
-      return anchor.duration;
-    },
-    get animations() {
-      materialize();
-      return cachedAnimations ?? [];
-    },
-    get finished() {
-      return (finishedPromise ??= buildFinished());
-    },
-    get labels() {
-      return labels;
-    },
-    play,
-    pause,
-    reverse,
-    cancel,
-    stop,
-    seek,
-    setPlaybackRate,
-  };
+	const api: Timeline = {
+		add,
+		set: setEntry,
+		call,
+		label,
+		get duration() {
+			return anchor.duration;
+		},
+		get animations() {
+			materialize();
+			return cachedAnimations ?? EMPTY_ANIMATIONS;
+		},
+		get finished() {
+			return (finishedPromise ??= buildFinished());
+		},
+		get labels() {
+			return labels;
+		},
+		play,
+		pause,
+		reverse,
+		cancel,
+		stop,
+		seek,
+		setPlaybackRate
+	};
 
-  return api;
+	return api;
 };
