@@ -28,24 +28,24 @@
  * ```
  */
 
-import { clamp01 } from "$lib/shared/math";
-import type { EasingFn } from "./types";
+import { clamp01 } from '$lib/shared/math';
+import type { EasingFn } from './types';
 
 export interface StaggerOptions {
-  /**
-   * Which element has the shortest (zero) delay.
-   *  - `'start'`  (default) — first element starts immediately.
-   *  - `'end'`              — last element starts immediately.
-   *  - `'center'`           — middle element starts immediately, edges are latest.
-   *  - `number`             — normalized position in `[0, 1]` (0 = start, 1 = end).
-   */
-  from?: "start" | "end" | "center" | number;
-  /**
-   * Easing applied to the normalized distance from the origin before
-   * converting to a delay. Useful for non-linear "wave" staggers.
-   * Default: linear.
-   */
-  easing?: EasingFn;
+	/**
+	 * Which element has the shortest (zero) delay.
+	 *  - `'start'`  (default) — first element starts immediately.
+	 *  - `'end'`              — last element starts immediately.
+	 *  - `'center'`           — middle element starts immediately, edges are latest.
+	 *  - `number`             — normalized position in `[0, 1]` (0 = start, 1 = end).
+	 */
+	from?: 'start' | 'end' | 'center' | number;
+	/**
+	 * Easing applied to the normalized distance from the origin before
+	 * converting to a delay. Useful for non-linear "wave" staggers.
+	 * Default: linear.
+	 */
+	easing?: EasingFn;
 }
 
 /**
@@ -56,31 +56,34 @@ export interface StaggerOptions {
  * @param options  - Optional `from` origin and `easing`.
  */
 export const stagger = (
-  interval: number,
-  options: StaggerOptions = {},
-): (index: number, total: number) => number => {
-  const { from = "start", easing } = options;
+	interval: number,
+	options: StaggerOptions = {}
+): ((index: number, total: number) => number) => {
+	const { from = 'start', easing } = options;
 
-  return (index: number, total: number): number => {
-    const n = Math.max(1, total);
-    if (n === 1) return 0;
+	return (index: number, total: number): number => {
+		const n = Math.max(1, total);
+		if (n === 1) return 0;
 
-    // Resolve the origin as an absolute (possibly fractional) index.
-    const origin =
-      from === "start"  ? 0 :
-      from === "end"    ? n - 1 :
-      from === "center" ? (n - 1) / 2 :
-      // Clamp a 0-1 normalized position into [0, n-1].
-      clamp01(from) * (n - 1);
+		// Resolve the origin as an absolute (possibly fractional) index.
+		const origin =
+			from === 'start'
+				? 0
+				: from === 'end'
+					? n - 1
+					: from === 'center'
+						? (n - 1) / 2
+						: // Clamp a 0-1 normalized position into [0, n-1].
+							clamp01(from) * (n - 1);
 
-    // Distance from this index to the origin, normalized to [0, 1] relative
-    // to the farthest element so the maximum stagger = (maxDist * interval).
-    const maxDist = Math.max(Math.abs(0 - origin), Math.abs(n - 1 - origin));
-    if (maxDist === 0) return 0;
+		// Distance from this index to the origin, normalized to [0, 1] relative
+		// to the farthest element so the maximum stagger = (maxDist * interval).
+		const maxDist = Math.max(Math.abs(0 - origin), Math.abs(n - 1 - origin));
+		if (maxDist === 0) return 0;
 
-    const normalizedDist = Math.abs(index - origin) / maxDist;
-    const easedDist = easing ? easing(normalizedDist) : normalizedDist;
+		const normalizedDist = Math.abs(index - origin) / maxDist;
+		const easedDist = easing ? easing(normalizedDist) : normalizedDist;
 
-    return easedDist * maxDist * interval;
-  };
+		return easedDist * maxDist * interval;
+	};
 };

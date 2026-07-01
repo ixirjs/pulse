@@ -21,9 +21,9 @@
  * ```
  */
 
-import { animate } from "./core/animate";
-import { measureWithoutAncestorTransforms } from "./properties/properties";
-import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from "./types";
+import { animate } from './core/animate';
+import { measureWithoutAncestorTransforms } from './properties/properties';
+import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from './types';
 
 // ---------------------------------------------------------------------------
 // Rect type
@@ -31,32 +31,32 @@ import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement 
 
 /** Axis-aligned bounding rectangle in viewport coordinates. */
 export interface FlipRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
 }
 
 /** A pair of rects describing a layout change (`from` → `to`). */
 export interface FlipRectPair {
-  from: FlipRect;
-  to: FlipRect;
+	from: FlipRect;
+	to: FlipRect;
 }
 
 export interface FlipDelta {
-  /** Horizontal translate component (`from.x - to.x`). */
-  dx: number;
-  /** Vertical translate component (`from.y - to.y`). */
-  dy: number;
-  /** Horizontal scale component (`from.width / to.width`). */
-  sx: number;
-  /** Vertical scale component (`from.height / to.height`). */
-  sy: number;
+	/** Horizontal translate component (`from.x - to.x`). */
+	dx: number;
+	/** Vertical translate component (`from.y - to.y`). */
+	dy: number;
+	/** Horizontal scale component (`from.width / to.width`). */
+	sx: number;
+	/** Vertical scale component (`from.height / to.height`). */
+	sy: number;
 }
 
 export interface DeltaOptions {
-  translate?: boolean;
-  scale?: boolean;
+	translate?: boolean;
+	scale?: boolean;
 }
 
 export const DEFAULT_FLIP_DURATION = 280;
@@ -67,9 +67,22 @@ export const DEFAULT_FLIP_DURATION = 280;
 
 /** Capture the element's current layout rect, suppressing in-flight transforms. */
 export const captureRect = (element: Element): FlipRect => {
-  const { left: x, top: y, width, height } =
-    measureWithoutAncestorTransforms(element);
-  return { x, y, width, height };
+	const { left: x, top: y, width, height } = measureWithoutAncestorTransforms(element);
+	return { x, y, width, height };
+};
+
+/**
+ * Capture the element's current *visual* rect — its own in-flight motion
+ * transform included, ancestor transforms still suppressed. Use this as the
+ * `from` rect when interrupting an in-flight FLIP so the replacement animation
+ * starts exactly where the element is on-screen, instead of snapping to its
+ * resting layout box first.
+ */
+export const captureVisualRect = (element: Element): FlipRect => {
+	const { left: x, top: y, width, height } = measureWithoutAncestorTransforms(element, {
+		suppressSelf: false
+	});
+	return { x, y, width, height };
 };
 
 /**
@@ -77,18 +90,18 @@ export const captureRect = (element: Element): FlipRect => {
  * Components disabled in `opts` resolve to their identity.
  */
 export const computeDelta = (
-  { from, to }: FlipRectPair,
-  { translate = true, scale = true }: DeltaOptions = {},
+	{ from, to }: FlipRectPair,
+	{ translate = true, scale = true }: DeltaOptions = {}
 ): FlipDelta => ({
-  dx: translate ? from.x - to.x : 0,
-  dy: translate ? from.y - to.y : 0,
-  sx: scale && to.width > 0 ? from.width / to.width : 1,
-  sy: scale && to.height > 0 ? from.height / to.height : 1,
+	dx: translate ? from.x - to.x : 0,
+	dy: translate ? from.y - to.y : 0,
+	sx: scale && to.width > 0 ? from.width / to.width : 1,
+	sy: scale && to.height > 0 ? from.height / to.height : 1
 });
 
 /** True when the delta would produce no visible movement. */
 export const isIdentityDelta = (delta: FlipDelta): boolean =>
-  delta.dx === 0 && delta.dy === 0 && delta.sx === 1 && delta.sy === 1;
+	delta.dx === 0 && delta.dy === 0 && delta.sx === 1 && delta.sy === 1;
 
 /**
  * Resolve the FLIP delta for a layout change, honoring direction.
@@ -103,10 +116,10 @@ export const isIdentityDelta = (delta: FlipDelta): boolean =>
  * two layers can never disagree on which way a forward FLIP moves.
  */
 export const resolveFlipDelta = (
-  from: FlipRect,
-  to: FlipRect,
-  forward: boolean,
-  opts?: DeltaOptions,
+	from: FlipRect,
+	to: FlipRect,
+	forward: boolean,
+	opts?: DeltaOptions
 ): FlipDelta => computeDelta(forward ? { from: to, to: from } : { from, to }, opts);
 
 /**
@@ -115,39 +128,35 @@ export const resolveFlipDelta = (
  * Inverse (default): DOM is at `to`; apply `[Δ→0]` to start visually at `from`.
  * Forward: DOM is at `from`; apply `[0→Δ]` to drive visually toward `to`.
  */
-export const buildFlipProps = (
-  { dx, dy, sx, sy }: FlipDelta,
-  forward: boolean,
-): AnimateProps => {
-  // `pair` orders the [from, to] keyframe by direction; `translate`/`scale`
-  // capture each component's unit and identity so they live in one place.
-  const pair = (delta: string, identity: string): [string, string] =>
-    forward ? [identity, delta] : [delta, identity];
-  const translate = (v: number): [string, string] => pair(`${v}px`, "0px");
-  const scale = (v: number): [string, string] => pair(`${v}`, "1");
-  return {
-    flipX:      translate(dx),
-    flipY:      translate(dy),
-    flipScaleX: scale(sx),
-    flipScaleY: scale(sy),
-  };
+export const buildFlipProps = ({ dx, dy, sx, sy }: FlipDelta, forward: boolean): AnimateProps => {
+	// `pair` orders the [from, to] keyframe by direction; `translate`/`scale`
+	// capture each component's unit and identity so they live in one place.
+	const pair = (delta: string, identity: string): [string, string] =>
+		forward ? [identity, delta] : [delta, identity];
+	const translate = (v: number): [string, string] => pair(`${v}px`, '0px');
+	const scale = (v: number): [string, string] => pair(`${v}`, '1');
+	return {
+		flipX: translate(dx),
+		flipY: translate(dy),
+		flipScaleX: scale(sx),
+		flipScaleY: scale(sy)
+	};
 };
 
 /** Shared kernel: animate the computed FLIP delta, forward or inverse. */
 const applyFlipDelta = (
-  element: MotionElement,
-  from: FlipRect,
-  to: FlipRect,
-  forward: boolean,
-  defaults: AnimateDefaults,
+	element: MotionElement,
+	from: FlipRect,
+	to: FlipRect,
+	forward: boolean,
+	defaults: AnimateDefaults
 ): AnimationController | null => {
-  const delta = resolveFlipDelta(from, to, forward);
-  if (isIdentityDelta(delta)) return null;
-  return animate(
-    element,
-    buildFlipProps(delta, forward),
-    { duration: DEFAULT_FLIP_DURATION, ...defaults },
-  );
+	const delta = resolveFlipDelta(from, to, forward);
+	if (isIdentityDelta(delta)) return null;
+	return animate(element, buildFlipProps(delta, forward), {
+		duration: DEFAULT_FLIP_DURATION,
+		...defaults
+	});
 };
 
 // ---------------------------------------------------------------------------
@@ -167,10 +176,11 @@ const applyFlipDelta = (
  * @returns        The `AnimationController`, or `null` when no work is needed.
  */
 export const flipFromRect = (
-  element: MotionElement,
-  from: FlipRect,
-  defaults: AnimateDefaults = {},
-): AnimationController | null => applyFlipDelta(element, from, captureRect(element), false, defaults);
+	element: MotionElement,
+	from: FlipRect,
+	defaults: AnimateDefaults = {}
+): AnimationController | null =>
+	applyFlipDelta(element, from, captureRect(element), false, defaults);
 
 /**
  * Animate an element from its current DOM position toward a target rect
@@ -186,7 +196,7 @@ export const flipFromRect = (
  * @returns        The `AnimationController`, or `null` when no work is needed.
  */
 export const flipToRect = (
-  element: MotionElement,
-  to: FlipRect,
-  defaults: AnimateDefaults = {},
+	element: MotionElement,
+	to: FlipRect,
+	defaults: AnimateDefaults = {}
 ): AnimationController | null => applyFlipDelta(element, captureRect(element), to, true, defaults);

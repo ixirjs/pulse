@@ -16,6 +16,9 @@ A tiny WAAPI animation runtime with spring physics, independent transform compon
     - [Choosing between them](#choosing-between-them)
       - [Spring physics parameters](#spring-physics-parameters)
   - [Easings](#easings)
+  - [Live spring values](#live-spring-values)
+  - [Motion path](#motion-path)
+  - [SVG draw-on](#svg-draw-on)
   - [The `AnimationController`](#the-animationcontroller)
   - [Lifecycle callbacks](#lifecycle-callbacks)
   - [Reduced motion](#reduced-motion)
@@ -60,11 +63,18 @@ animate(el, { x: 120 });               // unitless → appends default unit (px)
 animate(el, { opacity: [0, 1] });
 animate(el, { width: ['100px', '300px'] });
 
-// 3. Full PropConfig — all options available.
+// 3. Multi-stop sequence — three or more values become evenly-spaced keyframes.
+animate(el, { x: [0, 120, 80, 140] });          // overshoot then settle
+animate(el, { rotate: [0, -10, 10, 0] });        // wiggle
+
+// 4. Full PropConfig — all options available, incl. explicit keyframe offsets.
 animate(el, {
   x: { from: 0, to: 200, duration: 600, easing: easeInOut, delay: 100 },
+  y: { values: [0, -60, 0], offset: [0, 0.3, 1] }, // custom timing per stop
 });
 ```
+
+> **Multi-stop sequences.** Any property whose value is an array of **3+** entries is handed to WAAPI as that many keyframes (2-entry arrays remain `[from, to]`). Stops are spaced evenly across the duration unless you pass a matching `offset` array (0–1 positions) via the `PropConfig` form. The shared `easing` applies across the whole sequence.
 
 ---
 
@@ -90,6 +100,10 @@ are converted to kebab-case and treated as plain CSS properties.
 | `fontSize` | `font-size` | `px` |
 | `borderRadius` | `border-radius` | `px` |
 | `color / backgroundColor / borderColor` | color | — |
+| `fill / stroke` | SVG paint | — |
+| `strokeDashoffset / strokeDasharray` | SVG stroke dash | — |
+| `offsetDistance` | `offset-distance` (motion path) | `%` |
+| `offsetRotate` | `offset-rotate` | `deg` |
 
 Any other key is treated as a raw CSS property:
 
@@ -288,6 +302,54 @@ animate(el, { x: 100 }, {
 Both callbacks fire even when animations are skipped due to reduced-motion
 preference — `onEnd` is called immediately with `{ finished: true }`.
 
+### `onUpdate` — per-frame progress
+
+WAAPI can't call JS each frame, so passing `onUpdate` spins up a lightweight
+`requestAnimationFrame` loop for the animation's lifetime. Use it to drive a
+canvas, SVG attributes, or JS state alongside the CSS animation:
+
+```ts
+animate(el, { x: [0, 300] }, {
+  duration: 800,
+  onUpdate: (progress) => {
+    // progress is the current iteration position, 0 → 1
+    bar.style.setProperty('--p', String(progress));
+  },
+});
+```
+
+For tweening a raw number with no element involved, reach for
+[`animateValue`](#value-tweening) instead.
+
+---
+
+## Value tweening
+
+`animateValue(from, to, options)` tweens a plain number through the same easing
+engine and calls `onUpdate(value)` each frame — for counters, canvas, or any
+non-CSS target. `countUp(el, to)` is a convenience that writes the running value
+into an element's `textContent`.
+
+```ts
+import { animateValue, countUp } from '@svelte-atoms/vibra/animate';
+
+animateValue(0, 100, { duration: 800, round: true, onUpdate: (v) => (label.textContent = `${v}%`) });
+
+countUp(statEl, 1280, { duration: 1200 }); // 0 → 1,280 in the element's text
+```
+
+| Option                 | Default | Description                                            |
+| ---------------------- | ------- | ------------------------------------------------------ |
+| `duration`             | `300`   | Tween length in ms.                                    |
+| `easing`               | ease-out| Easing function.                                       |
+| `delay`                | `0`     | Delay before starting.                                 |
+| `onUpdate` (required)  | —       | Called each frame with the interpolated value.         |
+| `onComplete`           | —       | Called once when the tween settles.                    |
+| `round`                | —       | `true` → integers; a number `N` → round to N decimals. |
+
+Both return a `{ stop(), finished }` controller. Honors reduced motion (jumps to
+the end value).
+
 ---
 
 ## Reduced motion
@@ -432,6 +494,66 @@ await tl.finished;
 
 `tl.animations` returns every materialized WAAPI `Animation` if you need to
 hook into them directly.
+
+---
+
+## Live spring values
+
+`spring:` and `springEasing()` bake a fixed `linear(…)` curve up front. When you
+need motion that can be **re-targeted mid-flight without losing velocity** —
+drag-release, pointer-following, rapid toggles — use `createSpringValue()`, a
+continuous rAF integrator.
+
+```ts
+import { createSpringValue } from './index';
+
+const x = createSpringValue({ stiffness: 220, damping: 24 });
+x.subscribe((v) => el.style.setProperty('--motion-x', `${v}px`));
+
+x.set(200);          // springs toward 200, carrying any current velocity
+x.set(0);            // reverse mid-flight — momentum is preserved, no snap
+x.setVelocity(800);  // seed a flick before set()
+await x.finished;    // resolves when it settles
+```
+
+This is the engine behind [`draggable()`](../gestures/README.md)'s release momentum.
+
+---
+
+## Motion path
+
+`motionPath(element, path, options?)` moves an element along an arbitrary path by
+animating the natively-interpolated `offset-distance`. Auto-rotation along the
+path is on by default.
+
+```ts
+import { motionPath } from './index';
+
+motionPath(el, 'M0,0 C 50,-80 150,80 200,0', { duration: 1200 });
+motionPath(el, 'circle(80px at 50% 50%)', { from: 0, to: 50, rotate: false, spring: true });
+```
+
+A bare SVG path string is wrapped in `path(...)`; any value already containing a
+function (`path()`, `ray()`, `circle()`, `url()`) is used verbatim.
+
+---
+
+## SVG draw-on
+
+`draw(element, options?)` animates a stroked `SVGGeometryElement` so it appears to
+be drawn: it sets `stroke-dasharray` to the path length and animates
+`stroke-dashoffset`.
+
+```ts
+import { draw } from './index';
+
+draw(pathEl, { duration: 1000 });                         // draw on
+draw(pathEl, { from: 1, to: 0 });                         // erase
+draw(pathEl, { from: 0.2, to: 0.8, reverse: true });      // partial, other end
+```
+
+Like `animate()`, it accepts spring / easing / duration defaults and returns an
+`AnimationController`.
 
 ---
 
