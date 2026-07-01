@@ -8,43 +8,43 @@
  */
 
 export interface LayoutObservers {
-  connect: () => void;
-  disconnect: () => void;
+	connect: () => void;
+	disconnect: () => void;
 }
 
 interface LayoutObserverArgs {
-  element: Element;
-  onChange: () => void;
+	element: Element;
+	onChange: () => void;
 }
 
 export const createLayoutObservers = ({
-  element,
-  onChange,
+	element,
+	onChange
 }: LayoutObserverArgs): LayoutObservers => {
-  let resizeObserver: ResizeObserver | null = null;
-  let mutationObserver: MutationObserver | null = null;
+	let resizeObserver: ResizeObserver | null = null;
+	let mutationObserver: MutationObserver | null = null;
 
-  const disconnect = (): void => {
-    resizeObserver?.disconnect();
-    resizeObserver = null;
-    mutationObserver?.disconnect();
-    mutationObserver = null;
-  };
+	const disconnect = (): void => {
+		resizeObserver?.disconnect();
+		resizeObserver = null;
+		mutationObserver?.disconnect();
+		mutationObserver = null;
+	};
 
-  const connect = (): void => {
-    disconnect();
+	const connect = (): void => {
+		disconnect();
 
-    if (typeof ResizeObserver === "function") {
-      resizeObserver = new ResizeObserver(onChange);
-      resizeObserver.observe(element);
-    }
+		if (typeof ResizeObserver === 'function') {
+			resizeObserver = new ResizeObserver(onChange);
+			resizeObserver.observe(element);
+		}
 
-    const parent = element.parentElement;
-    if (parent && typeof MutationObserver === "function") {
-      mutationObserver = new MutationObserver(onChange);
-      mutationObserver.observe(parent, { childList: true, subtree: false });
-    }
-  };
+		const parent = element.parentElement;
+		if (parent && typeof MutationObserver === 'function') {
+			mutationObserver = new MutationObserver(onChange);
+			mutationObserver.observe(parent, { childList: true, subtree: false });
+		}
+	};
 
-  return { connect, disconnect };
+	return { connect, disconnect };
 };

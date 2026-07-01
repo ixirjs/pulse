@@ -5,13 +5,9 @@
  * so callers get a self-contained shared-layout namespace.
  */
 
-import { createFlipAttachment } from "./attachment.svelte";
-import { createLayoutBridge } from "./bridge";
-import type {
-  CreateFlipScopeOptions,
-  FlipOptionsInput,
-  FlipScope,
-} from "../types";
+import { createFlipAttachment } from './attachment.svelte';
+import { createLayoutBridge } from './bridge';
+import type { CreateFlipScopeOptions, FlipOptionsInput, FlipScope } from '../types';
 
 /**
  * Create an isolated FLIP scope with a shared-layout registry.
@@ -26,13 +22,11 @@ import type {
  * <div {@attach flip({ layoutId: "hero" })}>...</div>
  * ```
  */
-export const createFlipScope = (
-  opts: CreateFlipScopeOptions = {},
-): FlipScope => {
-  const { bridge, clear } = createLayoutBridge(opts.layoutTtlMs);
+export const createFlipScope = (opts: CreateFlipScopeOptions = {}): FlipScope => {
+	const { bridge, clear } = createLayoutBridge(opts.layoutTtlMs);
 
-  return {
-    flip: (input?: FlipOptionsInput) => createFlipAttachment(input, bridge),
-    clear,
-  };
+	return {
+		flip: (input?: FlipOptionsInput) => createFlipAttachment(input, bridge),
+		clear
+	};
 };
