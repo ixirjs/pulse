@@ -10,7 +10,7 @@ SVG path morphing — tween an SVG `<path>`'s `d` between two shapes. WAAPI can'
 | `morph.ts`       | `morph(element, from, to, options)` — the rAF driver. Writes the interpolated `d` each frame; honors `prefers-reduced-motion`.                                                                                                                                                                                                                               |
 
 ```ts
-import { morph } from '@svelte-atoms/vibra/morph';
+import { morph } from '@ixirjs/pulse/morph';
 
 const heart =
 	'M12 21s-7-4.35-9.5-8.5C1 9 3 5 6.5 5 9 5 12 8 12 8s3-3 5.5-3C21 5 23 9 21.5 12.5 19 16.65 12 21 12 21z';

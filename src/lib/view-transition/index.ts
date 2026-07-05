@@ -10,7 +10,7 @@
  * @example
  * ```svelte
  * <script>
- *   import { viewTransition, viewTransitionName } from '@svelte-atoms/vibra/view-transition';
+ *   import { viewTransition, viewTransitionName } from '@ixirjs/pulse/view-transition';
  *   import { tick } from 'svelte';
  *   let layout = $state('grid');
  *   const toggle = () =>

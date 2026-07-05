@@ -9,7 +9,7 @@
  *
  * @example
  * ```ts
- * import { easeOut, backOut, cubicBezier } from '@svelte-atoms/vibra/easing';
+ * import { easeOut, backOut, cubicBezier } from '@ixirjs/pulse/easing';
  *
  * const snappy = cubicBezier(0.2, 0.9, 0.2, 1);
  * animate(node, { x: 100, scale: { to: 1.1, easing: backOut } }, { easing: snappy });

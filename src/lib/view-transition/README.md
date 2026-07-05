@@ -1,6 +1,6 @@
 # view-transition
 
-Drives the browser's native [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API) with vibra's spring/easing engine. The browser still computes the old→new geometry; vibra **re-eases** the resulting pseudo-element animations, so you get GPU-composited morphs shaped by a spring — something plain CSS-driven view transitions can't do — exposed through the same [`AnimationController`](../animate/README.md) every other feature returns.
+Drives the browser's native [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API) with pulse's spring/easing engine. The browser still computes the old→new geometry; pulse **re-eases** the resulting pseudo-element animations, so you get GPU-composited morphs shaped by a spring — something plain CSS-driven view transitions can't do — exposed through the same [`AnimationController`](../animate/README.md) every other feature returns.
 
 | File                 | Responsibility                                                                                                                                                                                                                                                                                              |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -13,7 +13,7 @@ Drives the browser's native [View Transitions API](https://developer.mozilla.org
 ```svelte
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { viewTransition, viewTransitionName } from '@svelte-atoms/vibra/view-transition';
+	import { viewTransition, viewTransitionName } from '@ixirjs/pulse/view-transition';
 
 	let layout = $state<'grid' | 'list'>('grid');
 	const items = [
@@ -47,13 +47,13 @@ Drives the browser's native [View Transitions API](https://developer.mozilla.org
 
 ```ts
 import { onNavigate } from '$app/navigation';
-import { viewTransitionNavigate } from '@svelte-atoms/vibra/view-transition';
+import { viewTransitionNavigate } from '@ixirjs/pulse/view-transition';
 
 onNavigate((navigation) => viewTransitionNavigate(navigation, { spring: true }));
 ```
 
 ### Notes
 
-- **Re-easing, not re-computing.** The native API positions the snapshots; vibra only reshapes the timing curve. Omit `spring`/`easing`/`duration` to keep the browser default.
+- **Re-easing, not re-computing.** The native API positions the snapshots; pulse only reshapes the timing curve. Omit `spring`/`easing`/`duration` to keep the browser default.
 - **Controllability.** Because the morph runs on real WAAPI `Animation` objects, `seek`/`pause`/`reverse` work — but only once `transition.ready` has resolved (the pseudo-elements exist). `cancel()`/`stop()` skip to the end state and take effect immediately.
 - **Relationship to FLIP.** [`flip()`](../flip/README.md) remains the choice for fully interruptible, retargetable layout animation and for shared-element transitions that must work in every browser. View transitions add native cross-document (MPA) navigations and zero manual rect bookkeeping where supported.

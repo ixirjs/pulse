@@ -349,7 +349,7 @@
 <main class="mx-auto max-w-6xl px-6 py-16">
 	<header class="mb-12 flex items-end justify-between">
 		<div class="space-y-1">
-			<h1 class="text-2xl font-semibold tracking-tight text-zinc-900">vibra</h1>
+			<h1 class="text-2xl font-semibold tracking-tight text-zinc-900">pulse</h1>
 			<p class="text-sm text-zinc-500">A WAAPI motion library for Svelte 5.</p>
 		</div>
 		<a

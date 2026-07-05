@@ -8,7 +8,7 @@ Tween between CSS `linear-gradient` backgrounds — something WAAPI cannot do na
 | `parse.ts`    | Pure, DOM-free gradient parsing and interpolation (`parseLinearGradient`, `parseRGBA`, `lerpRGBA`, `formatLinearGradient`, `splitTopLevel`, `resolvePositions`). Unit-tested.                                                                                                                              |
 
 ```ts
-import { animateGradient } from '@svelte-atoms/vibra/gradient';
+import { animateGradient } from '@ixirjs/pulse/gradient';
 
 animateGradient(
 	el,

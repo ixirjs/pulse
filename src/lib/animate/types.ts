@@ -6,7 +6,7 @@ import type { EasingFn, MotionElement, SpringOptions } from '$lib/shared/types';
 
 export type { EasingFn, MotionElement, SpringOptions };
 
-/** Alias for {@link EasingFn}. Import ready-made easings from `@svelte-atoms/vibra/easing`. */
+/** Alias for {@link EasingFn}. Import ready-made easings from `@ixirjs/pulse/easing`. */
 export type Easing = EasingFn;
 
 /** WAAPI playback direction. */

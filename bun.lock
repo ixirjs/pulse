@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@svelte-atoms/vibra",
+      "name": "@ixirjs/pulse",
       "devDependencies": {
         "@changesets/cli": "^2.31.0",
         "@chromatic-com/storybook": "^5.1.2",

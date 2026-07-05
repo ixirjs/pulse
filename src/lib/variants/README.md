@@ -11,7 +11,7 @@ Each transition interrupts the previous one by committing the live on-screen val
 
 ```svelte
 <script>
-	import { variants } from '@svelte-atoms/vibra/variants';
+	import { variants } from '@ixirjs/pulse/variants';
 	let state = $state('rest');
 </script>
 

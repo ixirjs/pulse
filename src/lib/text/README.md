@@ -9,8 +9,8 @@ SplitText — break an element's text into per-character, per-word, or per-line 
 ```svelte
 <script>
 	import { onMount } from 'svelte';
-	import { animate, stagger } from '@svelte-atoms/vibra/animate';
-	import { splitText } from '@svelte-atoms/vibra/text';
+	import { animate, stagger } from '@ixirjs/pulse/animate';
+	import { splitText } from '@ixirjs/pulse/text';
 
 	let heading;
 

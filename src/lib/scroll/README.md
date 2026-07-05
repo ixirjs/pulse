@@ -10,8 +10,8 @@ Scroll-driven animation for Svelte 5. Two complementary primitives: bind an anim
 
 ```svelte
 <script>
-	import { scroll, inView } from '@svelte-atoms/vibra/scroll';
-	import { animate } from '@svelte-atoms/vibra/animate';
+	import { scroll, inView } from '@ixirjs/pulse/scroll';
+	import { animate } from '@ixirjs/pulse/animate';
 </script>
 
 <!-- Progress-linked: element parallax as it crosses the viewport -->

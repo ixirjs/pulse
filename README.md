@@ -1,4 +1,4 @@
-# @svelte-atoms/vibra
+# @ixirjs/pulse
 
 Spring-powered WAAPI animation utilities and FLIP layout transitions for Svelte 5.
 
@@ -13,7 +13,7 @@ Spring-powered WAAPI animation utilities and FLIP layout transitions for Svelte 
 ## Installation
 
 ```sh
-npm install @svelte-atoms/vibra
+npm install @ixirjs/pulse
 ```
 
 Svelte 5 is a required peer dependency:
@@ -27,7 +27,7 @@ npm install svelte@^5
 Animate one or more CSS properties on an element using the Web Animations API.
 
 ```ts
-import { animate } from '@svelte-atoms/vibra';
+import { animate } from '@ixirjs/pulse';
 
 // Bare value: current → target
 animate(el, { opacity: 1 });
@@ -97,7 +97,7 @@ Zero-config FLIP layout animation. Attach to any element that may shift position
 
 ```svelte
 <script>
-  import { flip } from '@svelte-atoms/vibra';
+  import { flip } from '@ixirjs/pulse';
   let open = $state(false);
 </script>
 
@@ -136,7 +136,7 @@ Zero-config FLIP layout animation. Attach to any element that may shift position
 
 ```svelte
 <script>
-  import { createFlipScope } from '@svelte-atoms/vibra';
+  import { createFlipScope } from '@ixirjs/pulse';
   const scope = createFlipScope();
 </script>
 
@@ -150,7 +150,7 @@ Zero-config FLIP layout animation. Attach to any element that may shift position
 ### Imperative flip
 
 ```ts
-import { snapshotRect, flipFrom } from '@svelte-atoms/vibra';
+import { snapshotRect, flipFrom } from '@ixirjs/pulse';
 
 const snapshot = snapshotRect(el);
 // ... DOM changes ...
@@ -162,7 +162,7 @@ flipFrom(el, snapshot, { duration: 300 });
 Sequence and parallelize `animate()` calls on a shared clock.
 
 ```ts
-import { timeline } from '@svelte-atoms/vibra';
+import { timeline } from '@ixirjs/pulse';
 
 timeline({ duration: 400 })
   .add(card,    { y: [20, 0], opacity: [0, 1] })
@@ -187,7 +187,7 @@ timeline({ duration: 400 })
 ## `stagger(interval, options?)`
 
 ```ts
-import { animate, stagger } from '@svelte-atoms/vibra';
+import { animate, stagger } from '@ixirjs/pulse';
 
 const delay = stagger(50);
 items.forEach((el, i) => {
@@ -206,7 +206,7 @@ const eased = stagger(60, { from: 'start', easing: easeOut });
 Simulate spring physics from 0 → 1 and return per-frame samples + duration:
 
 ```ts
-import { spring } from '@svelte-atoms/vibra';
+import { spring } from '@ixirjs/pulse';
 
 const { samples, duration } = spring({ stiffness: 200, damping: 20 });
 ```
@@ -225,7 +225,7 @@ const { samples, duration } = spring({ stiffness: 200, damping: 20 });
 Returns an `EasingFn` usable anywhere `easing` is accepted:
 
 ```ts
-import { animate, springEasing } from '@svelte-atoms/vibra';
+import { animate, springEasing } from '@ixirjs/pulse';
 
 const bouncy = springEasing({ stiffness: 300, damping: 18 });
 
@@ -238,8 +238,8 @@ animate(el, { scale: 1.2 }, { easing: bouncy });
 Import individually or via the `easings` namespace:
 
 ```ts
-import { cubicOut, backOut, elasticOut, cubicBezier } from '@svelte-atoms/vibra';
-import * as easings from '@svelte-atoms/vibra';
+import { cubicOut, backOut, elasticOut, cubicBezier } from '@ixirjs/pulse';
+import * as easings from '@ixirjs/pulse';
 
 const snappy = cubicBezier(0.2, 0.9, 0.2, 1);
 ```
@@ -251,15 +251,15 @@ Available: `linear`, `ease`, `easeIn`, `easeOut`, `easeInOut`, `quadIn/Out/InOut
 For better tree-shaking you can import directly from subpaths:
 
 ```ts
-import { animate, timeline, spring } from '@svelte-atoms/vibra/animate';
-import { flip, createFlipScope, flipFrom } from '@svelte-atoms/vibra/flip';
+import { animate, timeline, spring } from '@ixirjs/pulse/animate';
+import { flip, createFlipScope, flipFrom } from '@ixirjs/pulse/flip';
 ```
 
 ## Contributing
 
 ```sh
-git clone https://github.com/svelte-atoms/vibra
-cd vibra
+git clone https://github.com/ixirjs/pulse
+cd pulse
 npm install
 npm run dev      # start demo app
 npm test         # run tests

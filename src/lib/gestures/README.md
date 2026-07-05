@@ -18,8 +18,8 @@ Pointer-gesture attachments for Svelte 5. Each is a plain `{@attach}` — no com
 
 ```svelte
 <script>
-	import { draggable, hoverable, pressable } from '@svelte-atoms/vibra/gestures';
-	import { animate } from '@svelte-atoms/vibra/animate';
+	import { draggable, hoverable, pressable } from '@ixirjs/pulse/gestures';
+	import { animate } from '@ixirjs/pulse/animate';
 </script>
 
 <!-- Drag within bounds, springy rubber-band edges, momentum on release -->
@@ -56,8 +56,8 @@ Pointer-gesture attachments for Svelte 5. Each is a plain `{@attach}` — no com
 
 ```svelte
 <script>
-	import { moveable, swipeable, focusable } from '@svelte-atoms/vibra/gestures';
-	import { animate } from '@svelte-atoms/vibra/animate';
+	import { moveable, swipeable, focusable } from '@ixirjs/pulse/gestures';
+	import { animate } from '@ixirjs/pulse/animate';
 </script>
 
 <!-- Magnetic button: springs toward the cursor, settles back on leave -->
@@ -106,7 +106,7 @@ Pointer-gesture attachments for Svelte 5. Each is a plain `{@attach}` — no com
 
 ```svelte
 <script>
-	import { pinchable, wheelable, reorder } from '@svelte-atoms/vibra/gestures';
+	import { pinchable, wheelable, reorder } from '@ixirjs/pulse/gestures';
 
 	let list = $state(['Alpha', 'Beta', 'Gamma']);
 	const r = reorder({ items: () => list, onReorder: (next) => (list = next) });

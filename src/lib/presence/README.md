@@ -10,7 +10,7 @@ Svelte already _orchestrates_ presence — a keyed `{#each}` runs `out:` before 
 
 ```svelte
 <script>
-	import { fly, fade, scale, size } from '@svelte-atoms/vibra/presence';
+	import { fly, fade, scale, size } from '@ixirjs/pulse/presence';
 </script>
 
 {#each items as item (item.id)}

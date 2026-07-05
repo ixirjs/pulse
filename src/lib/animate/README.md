@@ -331,7 +331,7 @@ non-CSS target. `countUp(el, to)` is a convenience that writes the running value
 into an element's `textContent`.
 
 ```ts
-import { animateValue, countUp } from '@svelte-atoms/vibra/animate';
+import { animateValue, countUp } from '@ixirjs/pulse/animate';
 
 animateValue(0, 100, { duration: 800, round: true, onUpdate: (v) => (label.textContent = `${v}%`) });
 
