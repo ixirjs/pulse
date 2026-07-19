@@ -325,14 +325,32 @@
 		{ id: 'drift', label: 'Drift', color: 'bg-amber-500' }
 	];
 	let vtSelected = $state<string | null>(null);
-	function selectViewTransition(id: string) {
-		viewTransition(
+	let vtActive: ReturnType<typeof viewTransition> | undefined;
+	let vtRequest = 0;
+	async function selectViewTransition(id: string) {
+		const request = ++vtRequest;
+		const previous = vtActive;
+
+		// Starting a document transition cancels the previous one, but the spec
+		// permits their async update callbacks to overlap and run out of sequence.
+		// Finish the stale transition's cleanup first; only the latest click wins.
+		if (previous) {
+			previous.stop();
+			await previous.finished;
+			if (request !== vtRequest) return;
+		}
+
+		const controller = viewTransition(
 			async () => {
 				vtSelected = vtSelected === id ? null : id;
 				await tick();
 			},
 			{ spring: { stiffness: 220, damping: 26 } }
 		);
+		vtActive = controller;
+		void controller.finished.then(() => {
+			if (vtActive === controller) vtActive = undefined;
+		});
 	}
 </script>
 
@@ -1044,8 +1062,8 @@ animate(ring, { strokeDashoffset: [C, 0] }, {
 		<DemoCard
 			title="viewTransition()"
 			code={`// Native View Transitions API, re-eased with a spring. Clicking a
-// tile promotes it to a featured hero; a shared view-transition-name
-// makes it morph from its grid cell into the hero (and back).
+// tile promotes it to a featured hero. Capture a non-interactive child,
+// not the button: captured elements cannot receive pointer events.
 let selected = $state<string | null>(null);
 
 function select(id: string) {
@@ -1057,37 +1075,53 @@ function select(id: string) {
 
 {#if selected}
   {@const item = items.find((i) => i.id === selected)}
-  <button {@attach viewTransitionName(item.id)} onclick={() => select(item.id)}>
-    {item.label}
+  <button type="button" onclick={() => select(item.id)}>
+    <span {@attach viewTransitionName(item.id)}>{item.label}</span>
   </button>
 {/if}
 <div class="grid grid-cols-3">
   {#each items.filter((i) => i.id !== selected) as item (item.id)}
-    <button {@attach viewTransitionName(item.id)} onclick={() => select(item.id)}>
-      {item.label}
+    <button type="button" onclick={() => select(item.id)}>
+      <span {@attach viewTransitionName(item.id)}>{item.label}</span>
     </button>
   {/each}
-</div>`}
+</div>
+
+<style>
+  /* Keep the document and controls live/hit-testable during this local morph. */
+  :global(html) { view-transition-name: none; }
+  :global(::view-transition) { pointer-events: none; }
+</style>`}
 		>
 			<div class="flex w-full max-w-60 flex-col gap-2">
 				{#if vtSelected}
 					{@const item = vtItems.find((i) => i.id === vtSelected)!}
 					<button
-						{@attach viewTransitionName(item.id)}
+						type="button"
 						onclick={() => selectViewTransition(item.id)}
-						class={`flex h-20 items-center justify-center rounded-lg text-sm font-semibold text-white ${item.color}`}
+						class="h-20 w-full"
 					>
-						{item.label}
+						<span
+							{@attach viewTransitionName(item.id)}
+							class={`flex size-full items-center justify-center rounded-lg text-sm font-semibold text-white ${item.color}`}
+						>
+							{item.label}
+						</span>
 					</button>
 				{/if}
 				<div class={`grid gap-2 ${vtSelected ? 'grid-cols-3' : 'grid-cols-2'}`}>
 					{#each vtItems.filter((i) => i.id !== vtSelected) as item (item.id)}
 						<button
-							{@attach viewTransitionName(item.id)}
+							type="button"
 							onclick={() => selectViewTransition(item.id)}
-							class={`flex h-12 items-center justify-center rounded-lg text-[11px] font-semibold text-white ${item.color}`}
+							class="h-12 min-w-0"
 						>
-							{item.label}
+							<span
+								{@attach viewTransitionName(item.id)}
+								class={`flex size-full items-center justify-center rounded-lg text-[11px] font-semibold text-white ${item.color}`}
+							>
+								{item.label}
+							</span>
 						</button>
 					{/each}
 				</div>

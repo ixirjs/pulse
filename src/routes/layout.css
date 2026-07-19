@@ -1,1 +1,16 @@
 @import 'tailwindcss';
+
+/* This page uses local shared-element transitions. Capturing `root` would make
+ * the entire live document ineligible for hit-testing during every morph. */
+html {
+	view-transition-name: none;
+}
+
+/* Let pointer input pass through snapshots to uncaptured controls beneath. */
+::view-transition,
+::view-transition-group(*),
+::view-transition-image-pair(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+	pointer-events: none;
+}
