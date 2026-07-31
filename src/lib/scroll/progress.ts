@@ -4,7 +4,7 @@
  * progress value.
  */
 
-import { clamp01 } from '$lib/shared/math';
+import { clamp01 } from '../shared/math';
 
 /** Whole-scroller progress: how far the scroll position has travelled. */
 export const pageProgress = (scroll: number, scrollSize: number, viewport: number): number =>

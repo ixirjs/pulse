@@ -1,12 +1,12 @@
 /**
  * SvelteKit glue — wrap a view transition around a client-side navigation.
  *
- * Kept framework-decoupled: instead of importing `$app/navigation` (a
- * SvelteKit-only virtual module), `navigation` is typed structurally so the
+ * Kept framework-decoupled: rather than importing SvelteKit's navigation
+ * module, `navigation` is typed structurally so the
  * helper works with any object exposing a `complete` promise.
  */
 
-import { isBrowser, shouldReduceMotion } from '$lib/shared/browser';
+import { isBrowser, shouldReduceMotion } from '../shared/browser';
 import { supportsViewTransitions, viewTransition } from './view-transition';
 import type { ViewTransitionOptions } from './types';
 
@@ -22,11 +22,7 @@ export interface NavigationLike {
  * swapping the DOM. Returns `undefined` (a plain navigation) when the API is
  * unavailable or reduced motion is requested.
  *
- * @example
- * ```ts
- * import { onNavigate } from '$app/navigation';
- * onNavigate((nav) => viewTransitionNavigate(nav, { spring: true }));
- * ```
+ * Register this with SvelteKit's `onNavigate` hook and return its result.
  */
 export const viewTransitionNavigate = (
 	navigation: NavigationLike,

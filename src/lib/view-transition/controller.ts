@@ -11,7 +11,7 @@
  * controllable.
  */
 
-import type { AnimationController } from '$lib/animate/types';
+import type { AnimationController } from '../animate/types';
 import { resolveViewTransitionTiming } from './timing';
 import type { ViewTransitionOptions } from './types';
 

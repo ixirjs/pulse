@@ -24,10 +24,10 @@
 
 import { untrack } from 'svelte';
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
+import { isBrowser } from '../shared/browser';
+import type { MotionElement } from '../animate';
 import { createVariants, type VariantMap } from './variants';
-import type { AnimateDefaults } from '$lib/animate';
+import type { AnimateDefaults } from '../animate';
 
 export interface VariantsAttachmentOptions {
 	/** The named states. */

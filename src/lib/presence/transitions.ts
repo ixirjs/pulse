@@ -17,8 +17,9 @@
  */
 
 import type { TransitionConfig } from 'svelte/transition';
-import { easeOut, springEasing } from '$lib/easing';
-import type { EasingFn, SpringOptions } from '$lib/shared/types';
+import { easeOut, springEasing } from '../easing';
+import { restoreStyleProp, saveStyleProp } from '../shared/inline-style';
+import type { EasingFn, SpringOptions } from '../shared/types';
 
 export interface PresenceParams {
 	/** Delay before the transition starts (ms). */
@@ -81,12 +82,10 @@ export interface SizeFields {
 const resolveSize = (node: Element, axis: 'width' | 'height', value: SizeValue): number => {
 	if (typeof value === 'number') return value;
 	const style = (node as HTMLElement).style;
-	const prev = style.getPropertyValue(axis);
-	const priority = style.getPropertyPriority(axis);
+	const saved = saveStyleProp(style, axis);
 	style.setProperty(axis, value);
 	const resolved = px(getComputedStyle(node), axis);
-	if (prev) style.setProperty(axis, prev, priority);
-	else style.removeProperty(axis);
+	restoreStyleProp(style, axis, saved);
 	return resolved;
 };
 

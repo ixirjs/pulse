@@ -24,13 +24,8 @@
  * ```
  */
 
-import { animate } from '$lib/animate';
-import type {
-	AnimateDefaults,
-	AnimateProps,
-	AnimationController,
-	MotionElement
-} from '$lib/animate';
+import { animate } from '../animate';
+import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from '../animate';
 
 /** Map of state name → target props. */
 export type VariantMap = Record<string, AnimateProps>;
