@@ -9,14 +9,3 @@ export { parsePath } from './parse';
 export type { PathCommand } from './parse';
 export { normalizePath } from './normalize';
 export type { Subpath, CubicSegment, Point } from './normalize';
-export {
-	planMorph,
-	interpolatePlan,
-	toPathString,
-	subdivideTo,
-	alignSubpaths,
-	minimizeAnchorTravel,
-	rotateClosed,
-	reverseClosed
-} from './interpolate';
-export type { MorphPlan } from './interpolate';
