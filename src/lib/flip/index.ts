@@ -43,6 +43,14 @@ export const flipFrom = (
 	options: FlipOptions = {}
 ): AnimationController | null => animateFlip({ element, from, to: measure(element), options });
 
+/** Animate an element from its current position to a captured rect. */
+export const flipTo = (
+	element: MotionElement,
+	to: FlipRect,
+	options: FlipOptions = {}
+): AnimationController | null =>
+	animateFlip({ element, from: measure(element), to, options, forward: true });
+
 /**
  * Create an isolated FLIP scope with a shared-layout registry.
  * Use `layoutId` on attachments from the same scope for cross-component
