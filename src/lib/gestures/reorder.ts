@@ -11,27 +11,38 @@
  * @example
  * ```svelte
  * <script>
- *   let list = $state(['a', 'b', 'c']);
- *   const r = reorder({ items: () => list, onReorder: (next) => (list = next) });
+ * 	let list = $state(['a', 'b', 'c']);
+ * 	const r = reorder({ items: () => list, onReorder: (next) => (list = next) });
  * </script>
  *
  * {#each list as value (value)}
- *   <div {@attach r.item(value)}>{value}</div>
+ * 	<div {@attach r.item(value)}>{value}</div>
  * {/each}
  * ```
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import { snapshotRect, flipFrom } from '$lib/flip';
-import type { EasingFn } from '$lib/shared/types';
+import { isBrowser } from '../shared/browser';
+import { snapshotRect, flipFrom } from '../flip';
+import type { EasingFn } from '../shared/types';
+import {
+	ensurePropertiesRegistered,
+	ensureTransformWired
+} from '../animate/properties/transform-setup';
+import { restoreStyleProp, saveStyleProp, type SavedStyleProp } from '../shared/inline-style';
 import { capture, release } from './pointer-capture';
+import { centersAreAscending, nearestCenterIndex } from './reorder-internals';
 
 export interface ReorderOptions<T> {
 	/** Reactive thunk returning the current ordered list. */
 	items: () => T[];
 	/** Called with the new order when a drag drops on a different slot. */
 	onReorder: (next: T[]) => void;
+	/**
+	 * Returns the stable, unique identity for each row. Required when item values
+	 * are duplicated or recreated; defaults to the value itself.
+	 */
+	getKey?: (item: T) => unknown;
 	/** Drag axis. Default `'y'`. */
 	axis?: 'x' | 'y';
 	/** Disable dragging without detaching. */
@@ -55,51 +66,86 @@ const arrayMove = <T>(arr: readonly T[], from: number, to: number): T[] => {
 	return next;
 };
 
-const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n));
+const REORDER_X = '--motion-reorder-x';
+const REORDER_Y = '--motion-reorder-y';
+const DRAG_STYLE_PROPERTIES = [REORDER_X, REORDER_Y, 'transition', 'position', 'z-index'] as const;
+type DragStyleProperty = (typeof DRAG_STYLE_PROPERTIES)[number];
+type DragStyleSnapshot = Record<DragStyleProperty, SavedStyleProp>;
+
+const snapshotDragStyles = (element: HTMLElement): DragStyleSnapshot =>
+	Object.fromEntries(
+		DRAG_STYLE_PROPERTIES.map((property) => [property, saveStyleProp(element.style, property)])
+	) as DragStyleSnapshot;
+
+const restoreDragStyles = (element: HTMLElement, snapshot: DragStyleSnapshot): void => {
+	for (const property of DRAG_STYLE_PROPERTIES) {
+		restoreStyleProp(element.style, property, snapshot[property]);
+	}
+};
+
+const setReorderOffset = (element: HTMLElement, horizontal: boolean, offset: number): void => {
+	element.style.setProperty(horizontal ? REORDER_X : REORDER_Y, `${offset}px`);
+};
 
 interface DragState {
 	pointerId: number;
 	el: HTMLElement;
 	from: number;
 	over: number;
-	stride: number;
+	centers: number[];
+	centersAscending: boolean;
 	start: number;
 	els: HTMLElement[];
-	centers: number[];
+	styles: Map<HTMLElement, DragStyleSnapshot>;
 }
 
 /** Create a reorder controller for one list. */
 export const reorder = <T>(options: ReorderOptions<T>): ReorderHandle<T> => {
 	const { axis = 'y', duration = 220 } = options;
 	const horizontal = axis === 'x';
-	const elements = new Map<T, HTMLElement>();
+	const keyOf = options.getKey ?? ((value: T): unknown => value);
+	const elements = new Map<unknown, HTMLElement>();
 
 	const coordOf = (e: PointerEvent): number => (horizontal ? e.clientX : e.clientY);
 	const centerOf = (r: DOMRect): number =>
 		horizontal ? r.left + r.width / 2 : r.top + r.height / 2;
-	const translate = (px: number): string =>
-		horizontal ? `translateX(${px}px)` : `translateY(${px}px)`;
 
 	let drag: DragState | null = null;
+	// The data callback commits synchronously, but the framework needs one frame
+	// to render that order before FLIP can measure it. Keep that deferred handoff
+	// owned by this attachment so teardown cannot animate a detached node.
+	let settleFrame: number | null = null;
 
-	/** Slide siblings between `from` and `over` to open the drop slot. */
+	const cancelPendingSettle = (): void => {
+		if (settleFrame == null) return;
+		cancelAnimationFrame(settleFrame);
+		settleFrame = null;
+	};
+
+	const restoreDrag = (state: DragState): void => {
+		for (const node of state.els) restoreDragStyles(node, state.styles.get(node)!);
+	};
+
+	/** Slide siblings into the dragged row's actual slot, including variable item sizes and gaps. */
 	const layoutSiblings = (): void => {
 		if (!drag) return;
-		const { els, from, over, stride } = drag;
+		const { els, from, over, centers } = drag;
 		for (let i = 0; i < els.length; i++) {
-			if (i === drag.from) continue;
+			if (i === from) continue;
 			let shift = 0;
-			if (from < over && i > from && i <= over) shift = -stride;
-			else if (over < from && i >= over && i < from) shift = stride;
-			els[i]!.style.transform = shift ? translate(shift) : '';
+			if (from < over && i > from && i <= over) shift = centers[i - 1]! - centers[i]!;
+			else if (over < from && i >= over && i < from) shift = centers[i + 1]! - centers[i]!;
+			setReorderOffset(els[i]!, horizontal, shift);
 		}
 	};
 
 	const onMove = (e: PointerEvent): void => {
 		if (!drag || e.pointerId !== drag.pointerId) return;
+		const { centers, centersAscending, from } = drag;
 		const delta = coordOf(e) - drag.start;
-		drag.el.style.transform = translate(delta);
-		const over = clamp(drag.from + Math.round(delta / drag.stride), 0, drag.els.length - 1);
+		setReorderOffset(drag.el, horizontal, delta);
+		const targetCenter = centers[from]! + delta;
+		const over = nearestCenterIndex(centers, targetCenter, centersAscending);
 		if (over !== drag.over) {
 			drag.over = over;
 			layoutSiblings();
@@ -108,31 +154,40 @@ export const reorder = <T>(options: ReorderOptions<T>): ReorderHandle<T> => {
 
 	const endDrag = (e: PointerEvent): void => {
 		if (!drag || e.pointerId !== drag.pointerId) return;
-		const { el, els, from, over, pointerId } = drag;
+		const state = drag;
+		const { el, els, from, over, pointerId } = state;
 		el.removeEventListener('pointermove', onMove as EventListener);
 		el.removeEventListener('pointerup', endDrag as EventListener);
 		el.removeEventListener('pointercancel', endDrag as EventListener);
 		release(el, pointerId);
 		drag = null;
 
-		// Capture every row's current (transformed) position, drop the inline
-		// transforms, commit the reorder, then FLIP each row from where it
-		// visually was into its freshly-laid-out slot.
+		// Capture the composed visual position, restore every property this drag
+		// owns, commit data, then FLIP into the freshly laid-out slots.
 		const fromRects = els.map((node) => snapshotRect(node));
-		for (const node of els) {
-			node.style.transform = '';
-			node.style.transition = '';
-		}
-		el.style.zIndex = '';
-		el.style.position = '';
+		restoreDrag(state);
 
 		if (over !== from) options.onReorder(arrayMove(options.items(), from, over));
 
-		requestAnimationFrame(() => {
+		cancelPendingSettle();
+		settleFrame = requestAnimationFrame(() => {
+			settleFrame = null;
 			for (let i = 0; i < els.length; i++) {
 				flipFrom(els[i]!, fromRects[i]!, { duration, easing: options.easing });
 			}
 		});
+	};
+
+	const cancelDrag = (): void => {
+		if (!drag) return;
+		const state = drag;
+		const { el, pointerId } = state;
+		el.removeEventListener('pointermove', onMove as EventListener);
+		el.removeEventListener('pointerup', endDrag as EventListener);
+		el.removeEventListener('pointercancel', endDrag as EventListener);
+		release(el, pointerId);
+		drag = null;
+		restoreDrag(state);
 	};
 
 	const onDown =
@@ -140,35 +195,38 @@ export const reorder = <T>(options: ReorderOptions<T>): ReorderHandle<T> => {
 		(e: PointerEvent): void => {
 			if (options.disabled || e.button !== 0 || drag) return;
 			const order = options.items();
-			const els = order.map((v) => elements.get(v)).filter((n): n is HTMLElement => !!n);
-			const from = els.indexOf(el);
+			const keys = order.map(keyOf);
+			// A value is a safe default key only while it is unique. Refuse an
+			// ambiguous drag rather than moving the wrong row; callers can supply getKey.
+			if (new Set(keys).size !== keys.length) return;
+			const els = keys.map((key) => elements.get(key));
+			if (els.some((node): node is undefined => !node)) return;
+			const rows = els as HTMLElement[];
+			const from = rows.indexOf(el);
 			if (from < 0) return;
 
-			const rects = els.map((node) => node.getBoundingClientRect());
+			const rects = rows.map((node) => node.getBoundingClientRect());
 			const centers = rects.map(centerOf);
-			const stride =
-				els.length > 1
-					? (centers[centers.length - 1]! - centers[0]!) / (els.length - 1)
-					: horizontal
-						? rects[0]!.width
-						: rects[0]!.height;
+			const styles = new Map(rows.map((node) => [node, snapshotDragStyles(node)]));
 
 			drag = {
 				pointerId: e.pointerId,
 				el,
 				from,
 				over: from,
-				stride,
+				centers,
+				centersAscending: centersAreAscending(centers),
 				start: coordOf(e),
-				els,
-				centers
+				els: rows,
+				styles
 			};
 
-			// Lift the dragged row; give siblings a transition so they glide.
+			// Reorder owns only its dedicated motion channel and temporary drag
+			// presentation; existing transform and inline styles are never replaced.
 			el.style.position = 'relative';
 			el.style.zIndex = '1';
-			for (let i = 0; i < els.length; i++) {
-				if (i !== from) els[i]!.style.transition = `transform ${duration}ms`;
+			for (let i = 0; i < rows.length; i++) {
+				if (i !== from) rows[i]!.style.transition = `translate ${duration}ms`;
 			}
 
 			capture(el, e.pointerId);
@@ -181,13 +239,20 @@ export const reorder = <T>(options: ReorderOptions<T>): ReorderHandle<T> => {
 		(value: T): Attachment<HTMLElement> =>
 		(el) => {
 			if (!isBrowser()) return;
-			elements.set(value, el);
-			el.style.touchAction = horizontal ? 'pan-y' : 'pan-x';
+			ensurePropertiesRegistered();
+			ensureTransformWired(el);
+			const key = keyOf(value);
+			elements.set(key, el);
+			const savedTouchAction = saveStyleProp(el.style, 'touch-action');
+			el.style.setProperty('touch-action', horizontal ? 'pan-y' : 'pan-x');
 			const down = onDown(el);
 			el.addEventListener('pointerdown', down as EventListener);
 			return () => {
+				if (drag?.els.includes(el)) cancelDrag();
+				cancelPendingSettle();
 				el.removeEventListener('pointerdown', down as EventListener);
-				elements.delete(value);
+				if (elements.get(key) === el) elements.delete(key);
+				restoreStyleProp(el.style, 'touch-action', savedTouchAction);
 			};
 		};
 
