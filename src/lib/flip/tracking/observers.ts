@@ -2,25 +2,17 @@
  * Auto-tracking observers.
  *
  * Wraps a `ResizeObserver` on the element plus a `MutationObserver` on its
- * parent (sibling reorder/insertion/removal) into a single connect/disconnect
- * pair. Connection is idempotent, and re-`connect()`ing rewires to the
- * current parent (handy when the element is reparented).
+ * parent (sibling reorder/insertion/removal) behind one connect/disconnect
+ * pair. `connect()` is idempotent and rewires to the element's current parent,
+ * so re-connecting after a reparent (or with a different element) is safe.
  */
 
-export interface LayoutObservers {
-	connect: () => void;
+export interface ObserverManager {
+	connect: (element: Element, onChange: () => void) => void;
 	disconnect: () => void;
 }
 
-interface LayoutObserverArgs {
-	element: Element;
-	onChange: () => void;
-}
-
-export const createLayoutObservers = ({
-	element,
-	onChange
-}: LayoutObserverArgs): LayoutObservers => {
+export const createObserverManager = (): ObserverManager => {
 	let resizeObserver: ResizeObserver | null = null;
 	let mutationObserver: MutationObserver | null = null;
 
@@ -31,20 +23,21 @@ export const createLayoutObservers = ({
 		mutationObserver = null;
 	};
 
-	const connect = (): void => {
-		disconnect();
+	return {
+		disconnect,
+		connect(element, onChange) {
+			disconnect();
 
-		if (typeof ResizeObserver === 'function') {
-			resizeObserver = new ResizeObserver(onChange);
-			resizeObserver.observe(element);
-		}
+			if (typeof ResizeObserver === 'function') {
+				resizeObserver = new ResizeObserver(onChange);
+				resizeObserver.observe(element);
+			}
 
-		const parent = element.parentElement;
-		if (parent && typeof MutationObserver === 'function') {
-			mutationObserver = new MutationObserver(onChange);
-			mutationObserver.observe(parent, { childList: true, subtree: false });
+			const parent = element.parentElement;
+			if (parent && typeof MutationObserver === 'function') {
+				mutationObserver = new MutationObserver(onChange);
+				mutationObserver.observe(parent, { childList: true, subtree: false });
+			}
 		}
 	};
-
-	return { connect, disconnect };
 };

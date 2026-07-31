@@ -8,9 +8,8 @@
  * cancel / wrap-onEnd / null-on-finish boilerplate.
  */
 
-import type { AnimationController } from '$lib/animate/types';
+import type { AnimationController } from '../../animate/types';
 import { animateFlip } from './animator';
-import { cancelController } from './cancel-controller';
 import type { FlipAnimateArgs } from '../types';
 
 interface ControllerSlot {
@@ -22,12 +21,22 @@ interface ControllerSlot {
 	cancel: () => void;
 }
 
+/** Cancel a controller, tolerating animations already torn down during cleanup. */
+const cancelSafely = (controller: AnimationController | null): void => {
+	if (!controller) return;
+	try {
+		controller.cancel();
+	} catch {
+		// noop — animation may already be torn down
+	}
+};
+
 export const createControllerSlot = (): ControllerSlot => {
 	let current: AnimationController | null = null;
 
 	return {
 		run: ({ options, ...rest }) => {
-			cancelController(current);
+			cancelSafely(current);
 			current = animateFlip({
 				...rest,
 				options: {
@@ -44,7 +53,7 @@ export const createControllerSlot = (): ControllerSlot => {
 		},
 		isActive: () => current !== null,
 		cancel: () => {
-			cancelController(current);
+			cancelSafely(current);
 			current = null;
 		}
 	};

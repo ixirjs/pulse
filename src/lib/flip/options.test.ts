@@ -7,13 +7,13 @@ import { describe, expect, it } from 'vitest';
 import { easeOut } from '$lib/easing';
 import {
 	DEFAULT_DELAY,
-	DEFAULT_DURATION,
-	DEFAULT_EASING,
 	readOptions,
 	resolveDuration,
 	resolveEasing,
 	resolveOpacity
 } from './options';
+import { DEFAULT_DURATION } from './geometry';
+import { DEFAULT_EASING } from '../animate/keyframes/easing-utils';
 import type { FlipRectPair } from './types';
 
 const pairAt = (dx = 0, dy = 0): FlipRectPair => ({

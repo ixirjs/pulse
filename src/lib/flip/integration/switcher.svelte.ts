@@ -20,7 +20,7 @@
 
 import { untrack } from 'svelte';
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
+import { isBrowser } from '../../shared/browser';
 import { createControllerSlot } from '../animation/controller-slot';
 import { measure } from '../geometry';
 import type { FlipOptions, FlipRect, MotionElement } from '../types';

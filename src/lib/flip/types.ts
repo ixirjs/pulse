@@ -1,7 +1,7 @@
 import type { Attachment } from 'svelte/attachments';
-import type { FlipRect, FlipRectPair } from '$lib/animate/flip';
-import type { EasingFn, MotionElement } from '$lib/shared/types';
-import type { ObserverManager } from './tracking/observer-manager';
+import type { FlipRect, FlipRectPair } from './geometry';
+import type { EasingFn, MotionElement } from '../shared/types';
+import type { ObserverManager } from './tracking/observers';
 
 // ---------------------------------------------------------------------------
 // Core geometry
@@ -107,14 +107,7 @@ export interface FlipAnimateArgs {
 // Public scope API
 // ---------------------------------------------------------------------------
 
-export interface CreateFlipScopeOptions {
-	/** Time in ms a layoutId rect remains valid after unmount. Default: 250. */
-	layoutTtlMs?: number;
-}
-
 export interface FlipScope {
 	/** Attachment factory bound to this scope's shared-layout registry. */
 	flip: (input?: FlipOptionsInput) => Attachment<MotionElement>;
-	/** Drop all stored layouts (useful between routes / tests). */
-	clear: () => void;
 }

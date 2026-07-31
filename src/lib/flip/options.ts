@@ -3,12 +3,10 @@
  * animator. All helpers are pure — no DOM access, no side effects.
  */
 
-import { CSS_EASINGS } from '$lib/easing';
-import type { EasingFn } from '$lib/shared/types';
-import { DEFAULT_FLIP_DURATION as DEFAULT_DURATION } from '$lib/animate/flip';
-import { DEFAULT_EASING } from '$lib/animate/keyframes/easing-utils';
-import { atLeast0 } from '$lib/shared/math';
-import { diagonal } from './geometry';
+import { CSS_EASINGS } from '../easing';
+import type { EasingFn } from '../shared/types';
+import { DEFAULT_EASING } from '../animate/keyframes/easing-utils';
+import { DEFAULT_DURATION, diagonal } from './geometry';
 import type {
 	FlipDuration,
 	FlipEasing,
@@ -18,7 +16,6 @@ import type {
 	FlipRectPair
 } from './types';
 
-export { DEFAULT_DURATION, DEFAULT_EASING };
 export const DEFAULT_DELAY = 0;
 
 /** Unwrap an options thunk; thunks let callers track reactive state. */
@@ -34,7 +31,7 @@ export const readOptions = (input: FlipOptionsInput): FlipOptions => {
 export const resolveDuration = (d: FlipDuration | undefined, rects: FlipRectPair): number => {
 	if (d == null) return DEFAULT_DURATION;
 	const raw = typeof d === 'function' ? d(diagonal(rects.from, rects.to), rects) : d;
-	return atLeast0(raw);
+	return Math.max(0, raw);
 };
 
 /** Normalize the `opacity` shorthand into a fully-populated config or `null`. */

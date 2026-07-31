@@ -1,18 +1,18 @@
 /**
  * Public entry point for the FLIP module.
  *
- * - Low-level primitives (`animateFlip`, `createFlipScope`, `createLayoutBridge`, …)
- *   are re-exported for consumers that need direct access.
- * - High-level helpers (`flip`, `snapshotRect`, `flipFrom`) live here so
- *   callers import from a single path instead of from a parallel barrel.
+ * Everything a consumer needs — `flip`, `snapshotRect`, `flipFrom`,
+ * `createFlipScope`, `anchoredFlip` — lives here. Observers, schedulers, and
+ * the layout bridge are internals and deliberately not exported.
  */
 
 import type { Attachment } from 'svelte/attachments';
-import type { AnimationController } from '$lib/animate/types';
+import type { AnimationController } from '../animate/types';
 import { animateFlip } from './animation/animator';
 import { createFlipAttachment } from './integration/attachment.svelte';
+import { createLayoutBridge } from './integration/bridge';
 import { measure } from './geometry';
-import type { FlipOptions, FlipOptionsInput, FlipRect, MotionElement } from './types';
+import type { FlipOptions, FlipOptionsInput, FlipRect, FlipScope, MotionElement } from './types';
 
 // ---------------------------------------------------------------------------
 // High-level API
@@ -44,20 +44,32 @@ export const flipFrom = (
 ): AnimationController | null => animateFlip({ element, from, to: measure(element), options });
 
 /**
- * Animate an element from its current position to a captured rect.
+ * Create an isolated FLIP scope with a shared-layout registry.
+ * Use `layoutId` on attachments from the same scope for cross-component
+ * shared-element transitions. No global state involved.
  *
- * This is a *forward* FLIP: the DOM stays at its current position while the
- * element is driven visually toward `to` via keyframes `[0 → Δ]`. Use it for
- * collapse / exit animations where the DOM has not yet been moved (e.g. the
- * element is about to be removed). Standard inverse-FLIP (`flipFrom`) requires
- * the DOM to already be at the target position.
+ * @example
+ * ```ts
+ * const { flip } = createFlipScope();
+ * ```
+ * ```svelte
+ * <div {@attach flip({ layoutId: "hero" })}>...</div>
+ * ```
  */
-export const flipTo = (
-	element: MotionElement,
-	to: FlipRect,
-	options: FlipOptions = {}
-): AnimationController | null =>
-	animateFlip({ element, from: measure(element), to, options, forward: true });
+export const createFlipScope = (): FlipScope => {
+	const bridge = createLayoutBridge();
+	return {
+		flip: (input?: FlipOptionsInput) => createFlipAttachment(input, bridge)
+	};
+};
+
+export { anchoredFlip } from './anchored';
+export type {
+	AnchoredFlipNodeFunction,
+	AnchoredFlipOptions,
+	AnchoredFlipReference,
+	AnchoredFlipReferenceGetter
+} from './anchored';
 
 // ---------------------------------------------------------------------------
 // Low-level re-exports
@@ -67,15 +79,9 @@ export { createFlipSwitcher } from './integration/switcher.svelte';
 export type { FlipSwitcher, FlipSwitchRole } from './integration/switcher.svelte';
 
 export { animateFlip } from './animation/animator';
-export { createFlipAttachment } from './integration/attachment.svelte';
-export { createFlipScope } from './integration/scope';
-export { createLayoutBridge } from './integration/bridge';
-export { computeDelta, diagonal, isIdentityDelta, measure, rectsEqual } from './geometry';
-export { createObserverManager } from './tracking/observer-manager';
-export type { ObserverManager } from './tracking/observer-manager';
-export { createReflowScheduler } from './tracking/scheduler';
+export { measure } from './geometry';
+// Public because `FlipOptions.auto` accepts an ObserverManager.
+export { createObserverManager } from './tracking/observers';
+export type { ObserverManager } from './tracking/observers';
 
-export type { FlipDelta, DeltaOptions } from './geometry';
-export type { LayoutBridgeHandle } from './integration/bridge';
-export type { ReflowScheduler } from './tracking/scheduler';
 export type * from './types';

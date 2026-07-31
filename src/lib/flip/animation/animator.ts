@@ -16,12 +16,12 @@
  * the same controller so a single `cancel()` aborts the whole effect.
  */
 
-import { animate } from '$lib/animate/core/animate';
-import { buildFlipProps } from '$lib/animate/flip';
-import type { AnimationController, MotionElement } from '$lib/animate/types';
-import { isIdentityDelta, rectsEqual, resolveFlipDelta } from '../geometry';
+import { animate } from '../../animate/core/animate';
+import type { AnimationController, MotionElement } from '../../animate/types';
+import { buildFlipProps, isIdentityDelta, rectsEqual, resolveFlipDelta } from '../geometry';
 import type { FlipDelta } from '../geometry';
-import { isBrowser, shouldReduceMotion } from '$lib/shared/browser';
+import { isBrowser, shouldReduceMotion } from '../../shared/browser';
+import { restoreStyleProp, saveStyleProp } from '../../shared/inline-style';
 import { DEFAULT_DELAY, resolveDuration, resolveEasing, resolveOpacity } from '../options';
 import type { FlipAnimateArgs } from '../types';
 
@@ -49,11 +49,9 @@ const suppressPointerEvents = (
 	enabled: boolean | undefined
 ): (() => void) => {
 	if (!enabled) return () => {};
-	const previous = element.style.pointerEvents;
-	element.style.pointerEvents = 'none';
-	return () => {
-		element.style.pointerEvents = previous;
-	};
+	const previous = saveStyleProp(element.style, 'pointer-events');
+	element.style.setProperty('pointer-events', 'none');
+	return () => restoreStyleProp(element.style, 'pointer-events', previous);
 };
 
 /**
@@ -121,7 +119,7 @@ export const animateFlip = ({
 	// CSS variable so this never collides with concurrent animate() calls.
 	const props = buildFlipProps(delta, forward);
 	if (opacity) {
-		props.opacity = [opacity.from, opacity.to];
+		props.opacity = forward ? [opacity.to, opacity.from] : [opacity.from, opacity.to];
 	}
 
 	const restorePointerEvents = suppressPointerEvents(element, options.disablePointerEvents);

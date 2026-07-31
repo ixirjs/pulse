@@ -9,13 +9,13 @@
 
 import { untrack } from 'svelte';
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
+import { isBrowser } from '../../shared/browser';
+import { createFrameBatch } from '../../shared/frame-batch';
 import type { LayoutBridge } from './bridge';
 import { createControllerSlot } from '../animation/controller-slot';
 import { measure, measureVisual, rectsEqual } from '../geometry';
-import type { ObserverManager } from '../tracking/observer-manager';
+import type { ObserverManager } from '../tracking/observers';
 import { readOptions } from '../options';
-import { createReflowScheduler } from '../tracking/scheduler';
 import type { FlipAuto, FlipOptions, FlipOptionsInput, FlipRect, MotionElement } from '../types';
 
 /**
@@ -64,7 +64,7 @@ export const createFlipAttachment = (
 			run(from, next);
 		};
 
-		const scheduler = createReflowScheduler(reflow);
+		const scheduler = createFrameBatch(reflow);
 		let connectedManager: ObserverManager | null = null;
 
 		const syncObservers = (): void => {
