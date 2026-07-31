@@ -7,8 +7,8 @@
 export { animate } from './core/animate';
 export { timeline } from './timeline/timeline';
 export type { Timeline, TimelineDefaults, TimelinePosition } from './timeline/timeline';
-export { spring } from './spring';
-export type { Spring } from './spring';
+export { spring } from '../shared/spring-core';
+export type { SpringSamples as Spring } from '../shared/spring-core';
 export { cubicBezier, springEasing } from '../easing';
 export type { SpringEasingFn } from '../easing';
 export * as easings from '../easing';
@@ -23,9 +23,6 @@ export { createSpringValue } from './spring-value';
 export type { SpringValue, SpringValueOptions } from './spring-value';
 export { animateValue, countUp } from './animate-value';
 export type { AnimateValueOptions, CountUpOptions, ValueController } from './animate-value';
-
-export { flipFromRect, flipToRect, captureRect } from './flip';
-export type { FlipRect as AnimateFlipRect } from './flip';
 
 export type {
 	AnimatableValue,
