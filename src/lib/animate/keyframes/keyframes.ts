@@ -6,7 +6,7 @@
 import { VAR_BIT, type PropDef } from '../properties/properties';
 import type { AnimatableValue, AnimateDefaults, AnimateProps, MotionElement } from '../types';
 import { normalizeInput, resolveTiming } from './normalize';
-import { isBrowser } from '$lib/shared/browser';
+import { isBrowser } from '../../shared/browser';
 import { isAutoKeyword, measureKeywordValue } from './keyword';
 import {
 	formatValue,

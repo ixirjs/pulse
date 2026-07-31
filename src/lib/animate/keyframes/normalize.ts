@@ -6,8 +6,7 @@
  * / delay) — including spring sampling.
  */
 
-import { getCachedSpring } from '$lib/shared/spring-core';
-import { atLeast0 } from '$lib/shared/math';
+import { getCachedSpring } from '../../shared/spring-core';
 import type {
 	AnimatableValue,
 	AnimateDefaults,
@@ -19,7 +18,7 @@ import type {
 	SpringOptions
 } from '../types';
 import { DEFAULT_DURATION, easingToCss } from './easing-utils';
-import { isSpringEasing } from '$lib/easing/spring';
+import { isSpringEasing } from '../../easing/spring';
 
 interface ResolvedTiming {
 	duration: number;
@@ -62,7 +61,7 @@ const resolveDurationMs = (
 	fallback: number
 ): number => {
 	if (duration == null) return fallback;
-	if (typeof duration === 'function') return atLeast0(duration(element!));
+	if (typeof duration === 'function') return Math.max(0, duration(element!));
 	return duration;
 };
 

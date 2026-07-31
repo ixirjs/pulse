@@ -11,8 +11,8 @@
 
 import type { PropDef } from '../properties/properties';
 import type { AnimatableValue, MotionElement } from '../types';
-import { isBrowser } from '$lib/shared/browser';
-import { restoreStyleProp, saveStyleProp } from '../properties/style-utils';
+import { isBrowser } from '../../shared/browser';
+import { restoreStyleProp, saveStyleProp } from '../../shared/inline-style';
 
 const AUTO_KEYWORDS = new Set([
 	'auto',

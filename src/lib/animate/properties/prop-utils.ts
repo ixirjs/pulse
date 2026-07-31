@@ -7,7 +7,7 @@
 
 import type { AnimatableValue, MotionElement } from '../types';
 import { PROPERTY_REGISTRY, type PropDef } from './properties';
-import { isBrowser } from '$lib/shared/browser';
+import { isBrowser } from '../../shared/browser';
 
 /**
  * Convert a possibly-numeric value to its CSS string form, applying the

@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_DURATION, DEFAULT_EASING, DEFAULT_EASING_CSS, easingToCss } from './easing-utils';
+import { DEFAULT_DURATION, DEFAULT_EASING, easingToCss } from './easing-utils';
 import { springEasing } from '$lib/easing/spring';
 
 // ---------------------------------------------------------------------------
@@ -46,28 +46,13 @@ describe('DEFAULT_EASING', () => {
 	});
 });
 
-describe('DEFAULT_EASING_CSS', () => {
-	it("is a string starting with 'linear('", () => {
-		expect(typeof DEFAULT_EASING_CSS).toBe('string');
-		expect(DEFAULT_EASING_CSS.startsWith('linear(')).toBe(true);
-	});
-
-	it("ends with ')'", () => {
-		expect(DEFAULT_EASING_CSS.endsWith(')')).toBe(true);
-	});
-
-	it('matches easingToCss(DEFAULT_EASING)', () => {
-		expect(DEFAULT_EASING_CSS).toBe(easingToCss(DEFAULT_EASING));
-	});
-});
-
 // ---------------------------------------------------------------------------
 // easingToCss()
 // ---------------------------------------------------------------------------
 
 describe('easingToCss()', () => {
-	it('returns DEFAULT_EASING_CSS when called with undefined', () => {
-		expect(easingToCss(undefined)).toBe(DEFAULT_EASING_CSS);
+	it('falls back to DEFAULT_EASING when called with undefined', () => {
+		expect(easingToCss(undefined)).toBe(easingToCss(DEFAULT_EASING));
 	});
 
 	it('returns a linear(...) CSS string for a plain function', () => {

@@ -25,7 +25,7 @@ import { normalizeInput } from '../keyframes/normalize';
 import { deregisterTransformAnimation, registerTransformAnimation } from '../properties/properties';
 import { ensurePropertiesRegistered, ensureTransformWired } from '../properties/transform-setup';
 import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from '../types';
-import { isBrowser, shouldReduceMotion } from '$lib/shared/browser';
+import { isBrowser, shouldReduceMotion } from '../../shared/browser';
 import { formatValue, resolveProp } from '../properties/prop-utils';
 
 /**

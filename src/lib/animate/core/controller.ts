@@ -3,7 +3,7 @@
  * and own the lifecycle hooks (`onStart` / `onEnd`) plus inline-style cleanup.
  */
 
-import { isBrowser } from '$lib/shared/browser';
+import { isBrowser } from '../../shared/browser';
 import type { AnimateDefaults, AnimationController, MotionElement } from '../types';
 import type { CssWrite } from '../keyframes/keyframes';
 
@@ -138,7 +138,15 @@ export const createController = ({
 		if (animations.length === 0) return (finishedPromise = Promise.resolve());
 		return (finishedPromise = Promise.all(animations.map((a) => a.finished)).then(
 			() => {
+				// Capture the terminal timing before finalize() cancels the effects.
+				// This is 1 for a normal one-shot animation, but correctly preserves
+				// alternate/reverse iteration direction.
+				const terminalProgress = primaryAnimation?.effect?.getComputedTiming().progress ?? 1;
 				finalize();
+				// The last rAF can run just before WAAPI reaches its terminal time.
+				// Publish the terminal sample explicitly so onUpdate has the same
+				// end-state guarantee as the animation controller itself.
+				defaults.onUpdate?.(terminalProgress, element);
 				defaults.onEnd?.(element, { finished: true });
 			},
 			(err) => {

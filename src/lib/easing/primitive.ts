@@ -1,4 +1,4 @@
-import type { EasingFn } from '$lib/shared/types';
+import type { EasingFn } from '../shared/types';
 
 export const linear: EasingFn = (t) => t;
 

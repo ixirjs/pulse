@@ -65,6 +65,22 @@ export const PROPERTY_REGISTRY: Readonly<Record<string, PropDef>> = {
 	// clobber sibling position animations that share --motion-x / --motion-y.
 	flipX: { css: '--flip-x', unit: 'px', initial: '0px', syntax: '<length>', transform: true },
 	flipY: { css: '--flip-y', unit: 'px', initial: '0px', syntax: '<length>', transform: true },
+	// Reorder-exclusive offsets — direct-manipulation drag and sibling shifts
+	// compose with animation and FLIP instead of replacing `transform`.
+	reorderX: {
+		css: '--motion-reorder-x',
+		unit: 'px',
+		initial: '0px',
+		syntax: '<length>',
+		transform: true
+	},
+	reorderY: {
+		css: '--motion-reorder-y',
+		unit: 'px',
+		initial: '0px',
+		syntax: '<length>',
+		transform: true
+	},
 	// FLIP-exclusive scale vars — compose with scaleX/scaleY so FLIP scale
 	// never clobbers sibling scale animations that share --motion-scale-x/y.
 	flipScaleX: {
@@ -179,8 +195,8 @@ export const PROPERTY_REGISTRY: Readonly<Record<string, PropDef>> = {
  */
 export const TRANSFORM_TEMPLATES = {
 	translate:
-		'calc(var(--motion-x, 0px) + var(--flip-x, 0px)) ' +
-		'calc(var(--motion-y, 0px) + var(--flip-y, 0px)) ' +
+		'calc(var(--motion-x, 0px) + var(--flip-x, 0px) + var(--motion-reorder-x, 0px)) ' +
+		'calc(var(--motion-y, 0px) + var(--flip-y, 0px) + var(--motion-reorder-y, 0px)) ' +
 		'var(--motion-z, 0px)',
 	scale:
 		'calc(var(--flip-scale-x, 1) * var(--motion-scale-x, 1) * var(--motion-scale, 1)) ' +

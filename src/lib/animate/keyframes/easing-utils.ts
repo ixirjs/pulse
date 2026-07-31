@@ -6,9 +6,9 @@
  */
 
 import type { EasingFn } from '../types';
-import { cubicOut } from '$lib/easing/primitive';
-import { isSpringEasing } from '$lib/easing/spring';
-import { samplesToLinearEasing } from '$lib/shared/spring-core';
+import { cubicOut } from '../../easing/primitive';
+import { isSpringEasing } from '../../easing/spring';
+import { samplesToLinearEasing } from '../../shared/spring-core';
 
 export const DEFAULT_DURATION = 300;
 /** Default easing — CSS `ease-out` cubic-bezier, shared with `cubicOut`. */
@@ -36,6 +36,3 @@ export const easingToCss = (easing: EasingFn | undefined): string => {
 	EASING_CACHE.set(fn, css);
 	return css;
 };
-
-/** Precomputed `linear(...)` string for the library default easing. */
-export const DEFAULT_EASING_CSS: string = easingToCss(DEFAULT_EASING);

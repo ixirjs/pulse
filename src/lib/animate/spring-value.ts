@@ -23,16 +23,9 @@
  * ```
  */
 
-import { isBrowser } from '$lib/shared/browser';
-import type { SpringOptions } from '$lib/shared/types';
-
-const SPRING_DEFAULTS = {
-	stiffness: 170,
-	damping: 26,
-	mass: 1,
-	restDelta: 0.001,
-	restSpeed: 0.001
-} as const;
+import { isBrowser } from '../shared/browser';
+import { SPRING_DEFAULTS } from '../shared/spring-core';
+import type { SpringOptions } from '../shared/types';
 
 /** Largest physics step (s) — clamps dt after a tab regains focus. */
 const MAX_DT = 1 / 30;

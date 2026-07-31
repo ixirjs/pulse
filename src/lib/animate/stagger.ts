@@ -28,7 +28,7 @@
  * ```
  */
 
-import { clamp01 } from '$lib/shared/math';
+import { clamp01 } from '../shared/math';
 import type { EasingFn } from './types';
 
 export interface StaggerOptions {
@@ -73,7 +73,7 @@ export const stagger = (
 					? n - 1
 					: from === 'center'
 						? (n - 1) / 2
-						: // Clamp a 0-1 normalized position into [0, n-1].
+						: // Map a 0-1 normalized position onto [0, n-1].
 							clamp01(from) * (n - 1);
 
 		// Distance from this index to the origin, normalized to [0, 1] relative

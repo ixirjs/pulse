@@ -25,8 +25,9 @@
  * ```
  */
 
-import { isBrowser, shouldReduceMotion } from '$lib/shared/browser';
-import { easeOut } from '$lib/easing';
+import { isBrowser, shouldReduceMotion } from '../shared/browser';
+import { frameTween } from '../shared/frame-tween';
+import { easeOut } from '../easing';
 import type { EasingFn } from './types';
 
 /** Default tween duration in ms when none is supplied. */
@@ -99,53 +100,22 @@ export const animateValue = (
 
 	const emit = makeRounder(round);
 
-	let frame: number | null = null;
-	let resolveFinished!: () => void;
-	const finished = new Promise<void>((resolve) => (resolveFinished = resolve));
-
 	// SSR, or reduced motion: jump to the end value and settle immediately.
 	if (!isBrowser() || shouldReduceMotion(respectReducedMotion)) {
 		onUpdate(emit(to));
 		onComplete?.();
-		resolveFinished();
-		return { stop: () => {}, finished };
+		return { stop: () => {}, finished: Promise.resolve() };
 	}
 
 	const span = to - from;
-	const start = performance.now() + delay;
+	const tween = frameTween({
+		duration,
+		delay,
+		onFrame: (progress) => onUpdate(emit(from + span * easing(progress))),
+		onComplete
+	});
 
-	const tick = (now: number): void => {
-		const elapsed = now - start;
-		if (elapsed < 0) {
-			// Still inside the delay window — keep waiting.
-			frame = requestAnimationFrame(tick);
-			return;
-		}
-		const progress = duration > 0 ? Math.min(elapsed / duration, 1) : 1;
-		const value = from + span * easing(progress);
-		onUpdate(emit(value));
-
-		if (progress >= 1) {
-			frame = null;
-			onComplete?.();
-			resolveFinished();
-			return;
-		}
-		frame = requestAnimationFrame(tick);
-	};
-
-	frame = requestAnimationFrame(tick);
-
-	return {
-		stop() {
-			if (frame != null) {
-				cancelAnimationFrame(frame);
-				frame = null;
-			}
-			resolveFinished();
-		},
-		finished
-	};
+	return { stop: tween.cancel, finished: tween.finished };
 };
 
 /** Options for {@link countUp}; same as {@link animateValue} but `onUpdate` is supplied. */

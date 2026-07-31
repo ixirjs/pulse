@@ -11,8 +11,6 @@
  *   `"label"` / `"label+=N"`→ named label ± offset
  */
 
-import { atLeast0 } from '$lib/shared/math';
-
 /**
  * Where to place a timeline entry. See file header for the full grammar.
  * `undefined` means "append after the current end" — the most common case.
@@ -49,7 +47,7 @@ const splitOffset = (expr: string): [string, number] => {
  */
 export const resolvePosition = (position: TimelinePosition, anchor: Anchor): number => {
 	if (position == null) return anchor.duration;
-	if (typeof position === 'number') return atLeast0(position);
+	if (typeof position === 'number') return Math.max(0, position);
 
 	const trimmed = position.trim();
 	if (trimmed === '') return anchor.duration;
@@ -59,17 +57,17 @@ export const resolvePosition = (position: TimelinePosition, anchor: Anchor): num
 	// parsing lives in one place; the base is empty for these.
 	if (trimmed.startsWith('+=') || trimmed.startsWith('-=')) {
 		const [, offset] = splitOffset(trimmed);
-		return atLeast0(anchor.duration + offset);
+		return Math.max(0, anchor.duration + offset);
 	}
 
 	const [base, offset] = splitOffset(trimmed);
 
-	if (base === '' || base === '>') return atLeast0(anchor.lastEnd + offset);
-	if (base === '<') return atLeast0(anchor.lastStart + offset);
+	if (base === '' || base === '>') return Math.max(0, anchor.lastEnd + offset);
+	if (base === '<') return Math.max(0, anchor.lastStart + offset);
 
 	const labelTime = anchor.labels.get(base);
 	if (labelTime === undefined) {
 		throw new Error(`[timeline] Unknown label or position: "${position}"`);
 	}
-	return atLeast0(labelTime + offset);
+	return Math.max(0, labelTime + offset);
 };

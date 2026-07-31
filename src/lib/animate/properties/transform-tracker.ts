@@ -10,7 +10,7 @@
  * static registry data and the dynamic runtime state live in different modules.
  */
 
-import { restoreStyleProp, saveStyleProp, type SavedStyleProp } from './style-utils';
+import { restoreStyleProp, saveStyleProp, type SavedStyleProp } from '../../shared/inline-style';
 import type { MotionElement } from '../types';
 
 /**
@@ -27,6 +27,8 @@ const MOTION_TRANSFORM_IDENTITIES: ReadonlyArray<readonly [string, string]> = [
 	['--motion-rotate', '0deg'],
 	['--flip-x', '0px'],
 	['--flip-y', '0px'],
+	['--motion-reorder-x', '0px'],
+	['--motion-reorder-y', '0px'],
 	['--flip-scale-x', '1'],
 	['--flip-scale-y', '1']
 ];
@@ -47,6 +49,8 @@ export const VAR_BIT: Readonly<Record<string, number>> = Object.fromEntries(
  * Entry is removed when all slots reach zero so suppressNode bails early.
  */
 const activeTransformCounts = new WeakMap<Element, Uint8Array>();
+/** Active slots mirror the count map, avoiding a full registry scan on hot paths. */
+const activeTransformBits = new WeakMap<Element, number>();
 
 const forEachBit = (bits: number, fn: (i: number) => void): void => {
 	for (let b = bits, i = 0; b !== 0; b >>>= 1, i++) {
@@ -61,18 +65,27 @@ export const registerTransformAnimation = (element: Element, bits: number): void
 		counts = new Uint8Array(N_TRANSFORM_VARS);
 		activeTransformCounts.set(element, counts);
 	}
-	const c = counts;
-	forEachBit(bits, (i) => c[i]++);
+	let activeBits = activeTransformBits.get(element) ?? 0;
+	forEachBit(bits, (i) => {
+		if (counts![i]++ === 0) activeBits |= 1 << i;
+	});
+	activeTransformBits.set(element, activeBits);
 };
 
 /** Mark that a WAAPI transform animation on an element has ended or was cancelled. */
 export const deregisterTransformAnimation = (element: Element, bits: number): void => {
 	const counts = activeTransformCounts.get(element);
 	if (!counts) return;
+	let activeBits = activeTransformBits.get(element) ?? 0;
 	forEachBit(bits, (i) => {
-		if (counts[i] > 0) counts[i]--;
+		if (counts[i] > 0 && --counts[i] === 0) activeBits &= ~(1 << i);
 	});
-	if (!counts.some((v) => v > 0)) activeTransformCounts.delete(element);
+	if (activeBits === 0) {
+		activeTransformCounts.delete(element);
+		activeTransformBits.delete(element);
+	} else {
+		activeTransformBits.set(element, activeBits);
+	}
 };
 
 /**
@@ -104,15 +117,14 @@ export const measureWithoutAncestorTransforms = (
 	const suppressed: Suppressed[] = [];
 
 	const suppressNode = (target: MotionElement): void => {
-		const counts = activeTransformCounts.get(target);
-		if (!counts) return;
+		const bits = activeTransformBits.get(target);
+		if (!bits) return;
 		const props: SavedProp[] = [];
-		for (let i = 0; i < N_TRANSFORM_VARS; i++) {
-			if (!counts[i]) continue;
+		forEachBit(bits, (i) => {
 			const [name, identity] = MOTION_TRANSFORM_IDENTITIES[i]!;
 			props.push({ name, saved: saveStyleProp(target.style, name) });
 			target.style.setProperty(name, identity, 'important');
-		}
+		});
 		if (props.length > 0) suppressed.push({ node: target, props });
 	};
 

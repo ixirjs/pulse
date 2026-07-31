@@ -42,7 +42,7 @@ import {
 	computeAnimateDuration,
 	offsetProps
 } from './timeline-internals';
-import { isBrowser } from '$lib/shared/browser';
+import { isBrowser } from '../../shared/browser';
 import type { Timeline, TimelineDefaults, TimelinePosition } from './timeline-types';
 
 // ---------------------------------------------------------------------------
