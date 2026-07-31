@@ -7,6 +7,13 @@
  * an interpolated gradient string each frame. Best results when both gradients
  * share the same number of colour stops; otherwise it snaps to the target.
  *
+ * ponytail: main-thread rAF loop + hand-rolled colour math. Registered
+ * `@property` custom properties (`<color>` / `<percentage>` / `<angle>`) would
+ * let the browser interpolate the stops and drop `lerpRGBA` + the canvas
+ * keyword-resolution hack — at the cost of a permanent global property
+ * registry and a Firefox 128 / Safari 16.4 floor. Switch when that floor is
+ * acceptable; the parser is needed either way.
+ *
  * @example
  * ```ts
  * animateGradient(
@@ -18,13 +25,12 @@
  * ```
  */
 
-import { isBrowser } from '$lib/shared/browser';
-import { easeOut } from '$lib/easing';
-import type { EasingFn } from '$lib/shared/types';
+import { isBrowser } from '../shared/browser';
+import { frameTween } from '../shared/frame-tween';
+import { easeOut } from '../easing';
+import type { EasingFn } from '../shared/types';
 import {
-	formatLinearGradient,
-	lerp,
-	lerpRGBA,
+	formatInterpolatedLinearGradient,
 	parseLinearGradient,
 	parseRGBA,
 	resolvePositions,
@@ -94,13 +100,7 @@ export const animateGradient = (
 		onComplete
 	} = options;
 
-	let resolveFinished!: () => void;
-	const finished = new Promise<void>((res) => (resolveFinished = res));
-
-	if (!isBrowser()) {
-		resolveFinished();
-		return { finished, cancel: () => {} };
-	}
+	if (!isBrowser()) return { finished: Promise.resolve(), cancel: () => {} };
 
 	const a = resolve(from);
 	const b = resolve(to);
@@ -110,53 +110,27 @@ export const animateGradient = (
 	if (a.colors.length !== b.colors.length) {
 		write(to);
 		onComplete?.();
-		resolveFinished();
-		return { finished, cancel: () => {} };
+		return { finished: Promise.resolve(), cancel: () => {} };
 	}
 
-	let frame: number | null = null;
-	let startTime = 0;
-	let done = false;
+	const tween = frameTween({
+		duration,
+		delay,
+		renderInitial: true,
+		onFrame: (progress) =>
+			write(
+				formatInterpolatedLinearGradient(
+					a.angle,
+					b.angle,
+					a.colors,
+					b.colors,
+					a.positions,
+					b.positions,
+					easing(progress)
+				)
+			),
+		onComplete
+	});
 
-	const finish = (): void => {
-		if (done) return;
-		done = true;
-		if (frame != null) cancelAnimationFrame(frame);
-		frame = null;
-		resolveFinished();
-	};
-
-	const render = (t: number): void => {
-		const e = easing(t);
-		const stops = a.colors.map((color, i) => ({
-			rgba: lerpRGBA(color, b.colors[i]!, e),
-			pos: lerp(a.positions[i]!, b.positions[i]!, e)
-		}));
-		write(formatLinearGradient(lerp(a.angle, b.angle, e), stops));
-	};
-
-	const tick = (now: number): void => {
-		if (!startTime) startTime = now + delay;
-		const elapsed = now - startTime;
-		if (elapsed < 0) {
-			frame = requestAnimationFrame(tick);
-			return;
-		}
-		const t = duration <= 0 ? 1 : Math.min(elapsed / duration, 1);
-		render(t);
-		if (t >= 1) {
-			onComplete?.();
-			finish();
-		} else {
-			frame = requestAnimationFrame(tick);
-		}
-	};
-
-	render(0);
-	frame = requestAnimationFrame(tick);
-
-	return {
-		finished,
-		cancel: finish
-	};
+	return { finished: tween.finished, cancel: tween.cancel };
 };
