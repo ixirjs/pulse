@@ -11,15 +11,16 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
-import type { SpringOptions } from '$lib/shared/types';
-import { createSpringValue } from '$lib/animate/spring-value';
+import { isBrowser } from '../shared/browser';
+import { restoreStyleProp, saveStyleProp } from '../shared/inline-style';
+import type { MotionElement } from '../animate';
+import type { SpringOptions } from '../shared/types';
+import { createSpringValue } from '../animate/spring-value';
 import { capture, release } from './pointer-capture';
 import {
 	ensurePropertiesRegistered,
 	ensureTransformWired
-} from '$lib/animate/properties/transform-setup';
+} from '../animate/properties/transform-setup';
 import { applyConstraint, xBounds, yBounds, type DragConstraints } from './constraints';
 
 export type DragAxis = 'x' | 'y' | 'both';
@@ -76,8 +77,8 @@ export const draggable = (options: DraggableOptions = {}): Attachment<MotionElem
 
 		ensurePropertiesRegistered();
 		ensureTransformWired(element);
-		const prevTouchAction = element.style.touchAction;
-		element.style.touchAction = touchActionFor(axis);
+		const savedTouchAction = saveStyleProp(element.style, 'touch-action');
+		element.style.setProperty('touch-action', touchActionFor(axis));
 
 		const lockX = axis === 'y';
 		const lockY = axis === 'x';
@@ -190,7 +191,7 @@ export const draggable = (options: DraggableOptions = {}): Attachment<MotionElem
 			unsubY();
 			springX.stop();
 			springY.stop();
-			element.style.touchAction = prevTouchAction;
+			restoreStyleProp(element.style, 'touch-action', savedTouchAction);
 		};
 	};
 };

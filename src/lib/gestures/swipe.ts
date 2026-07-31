@@ -13,8 +13,9 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
+import { isBrowser } from '../shared/browser';
+import { restoreStyleProp, saveStyleProp } from '../shared/inline-style';
+import type { MotionElement } from '../animate';
 import { capture, release } from './pointer-capture';
 
 export type SwipeAxis = 'x' | 'y' | 'both';
@@ -58,8 +59,8 @@ export const swipeable = (options: SwipeableOptions = {}): Attachment<MotionElem
 	return (element) => {
 		if (!isBrowser() || disabled) return;
 
-		const prevTouchAction = element.style.touchAction;
-		element.style.touchAction = touchActionFor(axis);
+		const savedTouchAction = saveStyleProp(element.style, 'touch-action');
+		element.style.setProperty('touch-action', touchActionFor(axis));
 
 		let tracking = false;
 		let pointerId = -1;
@@ -146,7 +147,7 @@ export const swipeable = (options: SwipeableOptions = {}): Attachment<MotionElem
 			element.removeEventListener('pointermove', move);
 			element.removeEventListener('pointerup', up);
 			element.removeEventListener('pointercancel', cancel);
-			element.style.touchAction = prevTouchAction;
+			restoreStyleProp(element.style, 'touch-action', savedTouchAction);
 		};
 	};
 };

@@ -11,13 +11,15 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
+import { isBrowser } from '../shared/browser';
+import { applyConstraint, type AxisBounds } from './constraints';
+import { restoreStyleProp, saveStyleProp } from '../shared/inline-style';
+import type { MotionElement } from '../animate';
 import { capture, release } from './pointer-capture';
 import {
 	ensurePropertiesRegistered,
 	ensureTransformWired
-} from '$lib/animate/properties/transform-setup';
+} from '../animate/properties/transform-setup';
 
 export interface PinchInfo {
 	/** Distance ratio of the two pointers relative to gesture start. */
@@ -32,7 +34,7 @@ export interface PinchableOptions {
 	/** Track rotation alongside scale. Default `true`. */
 	rotate?: boolean;
 	/** Clamp the reported (and applied) scale. */
-	scaleBounds?: { min?: number; max?: number };
+	scaleBounds?: AxisBounds;
 	/** Write `--motion-scale` / `--motion-rotate` on move. Default `true`. */
 	applyTransform?: boolean;
 	/** Disable pinching without removing the attachment. */
@@ -49,14 +51,6 @@ const distance = (ax: number, ay: number, bx: number, by: number): number =>
 /** Angle of the line between two client points, in degrees. */
 const angle = (ax: number, ay: number, bx: number, by: number): number =>
 	(Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
-
-const clampScale = (scale: number, bounds?: { min?: number; max?: number }): number => {
-	if (!bounds) return scale;
-	let next = scale;
-	if (bounds.min !== undefined) next = Math.max(bounds.min, next);
-	if (bounds.max !== undefined) next = Math.min(bounds.max, next);
-	return next;
-};
 
 /** Create a pinchable attachment. */
 export const pinchable = (options: PinchableOptions = {}): Attachment<MotionElement> => {
@@ -77,8 +71,8 @@ export const pinchable = (options: PinchableOptions = {}): Attachment<MotionElem
 			ensurePropertiesRegistered();
 			ensureTransformWired(element);
 		}
-		const prevTouchAction = element.style.touchAction;
-		element.style.touchAction = 'none';
+		const savedTouchAction = saveStyleProp(element.style, 'touch-action');
+		element.style.setProperty('touch-action', 'none');
 
 		// Live pointer positions keyed by pointerId; at most two are tracked.
 		const points = new Map<number, { x: number; y: number }>();
@@ -118,9 +112,9 @@ export const pinchable = (options: PinchableOptions = {}): Attachment<MotionElem
 
 			const [a, b] = [...points.values()];
 			const currentDistance = distance(a.x, a.y, b.x, b.y);
-			const scale = clampScale(
+			const scale = applyConstraint(
 				startDistance > 0 ? currentDistance / startDistance : 1,
-				scaleBounds
+				scaleBounds ?? {}
 			);
 			const rotation = rotate ? angle(a.x, a.y, b.x, b.y) - startAngle : 0;
 
@@ -138,9 +132,9 @@ export const pinchable = (options: PinchableOptions = {}): Attachment<MotionElem
 			if (pinching) {
 				const [a, b] = [...points.values()];
 				const currentDistance = distance(a.x, a.y, b.x, b.y);
-				const scale = clampScale(
+				const scale = applyConstraint(
 					startDistance > 0 ? currentDistance / startDistance : 1,
-					scaleBounds
+					scaleBounds ?? {}
 				);
 				const rotation = rotate ? angle(a.x, a.y, b.x, b.y) - startAngle : 0;
 				onEnd?.(info(scale, rotation), element);
@@ -164,7 +158,7 @@ export const pinchable = (options: PinchableOptions = {}): Attachment<MotionElem
 			element.removeEventListener('pointerup', up);
 			element.removeEventListener('pointercancel', up);
 			points.clear();
-			element.style.touchAction = prevTouchAction;
+			restoreStyleProp(element.style, 'touch-action', savedTouchAction);
 		};
 	};
 };

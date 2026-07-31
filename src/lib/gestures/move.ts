@@ -18,14 +18,14 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
-import type { SpringOptions } from '$lib/shared/types';
-import { createSpringValue } from '$lib/animate/spring-value';
+import { isBrowser } from '../shared/browser';
+import type { MotionElement } from '../animate';
+import type { SpringOptions } from '../shared/types';
+import { createSpringValue } from '../animate/spring-value';
 import {
 	ensurePropertiesRegistered,
 	ensureTransformWired
-} from '$lib/animate/properties/transform-setup';
+} from '../animate/properties/transform-setup';
 
 export interface MoveInfo {
 	/** Pointer position in client coordinates. */

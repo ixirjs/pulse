@@ -19,8 +19,8 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
+import { isBrowser } from '../shared/browser';
+import type { MotionElement } from '../animate';
 
 export interface FocusableOptions {
 	onFocusStart?: (element: MotionElement, event: FocusEvent) => void;
