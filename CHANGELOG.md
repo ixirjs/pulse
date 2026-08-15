@@ -78,4 +78,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Capture an element's current rect for use with `flipFrom`.
 
-[0.1.0]: https://github.com/svelte-atoms/vibra/releases/tag/v0.1.0
+[0.1.0]: https://github.com/ixirjs/pulse/releases/tag/v0.1.0
