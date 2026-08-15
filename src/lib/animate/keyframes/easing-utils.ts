@@ -7,6 +7,7 @@
 
 import type { EasingFn } from '../types';
 import { cubicOut } from '../../easing/primitive';
+import { cssKeywordOf } from '../../easing/css';
 import { isSpringEasing } from '../../easing/spring';
 import { samplesToLinearEasing } from '../../shared/spring-core';
 
@@ -29,8 +30,9 @@ const sampleEasing = (fn: EasingFn): string => {
  */
 export const easingToCss = (easing: EasingFn | undefined): string => {
 	const fn = easing ?? DEFAULT_EASING;
-	// Prefer a spring's pre-built high-fidelity string over the 25-point resample.
-	const cached = isSpringEasing(fn) ? fn._linearEasing : EASING_CACHE.get(fn);
+	// Prefer an exact form over the 25-point resample: a CSS keyword the browser
+	// implements natively, or a spring's pre-built high-fidelity string.
+	const cached = isSpringEasing(fn) ? fn._linearEasing : (cssKeywordOf(fn) ?? EASING_CACHE.get(fn));
 	if (cached) return cached;
 	const css = sampleEasing(fn);
 	EASING_CACHE.set(fn, css);
