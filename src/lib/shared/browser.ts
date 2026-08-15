@@ -1,5 +1,4 @@
-export const isBrowser = (): boolean =>
-	typeof window !== 'undefined' && typeof document !== 'undefined';
+export const isBrowser = (): boolean => typeof document !== 'undefined';
 
 /** Returns true when reduced motion should suppress animation.
  *  `respectFlag` defaults to `true`, matching `AnimateDefaults.respectReducedMotion`. */

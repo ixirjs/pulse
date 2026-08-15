@@ -29,12 +29,6 @@ export const createFrameBatch = (callback: () => void): FrameBatch => {
 
 	const schedule = (): void => {
 		if (queued) return;
-		if (typeof requestAnimationFrame !== 'function') {
-			// Non-DOM environments — run synchronously so tests still observe the
-			// effect. Real browsers always have RAF.
-			callback();
-			return;
-		}
 		queued = true;
 		pending.add(run);
 		if (frame == null) frame = requestAnimationFrame(flush);

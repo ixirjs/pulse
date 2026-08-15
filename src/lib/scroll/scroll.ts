@@ -26,6 +26,7 @@
 import type { Attachment } from 'svelte/attachments';
 import { isBrowser } from '../shared/browser';
 import { createFrameBatch } from '../shared/frame-batch';
+import { listen } from '../shared/listen';
 import type { AnimationController, MotionElement } from '../animate';
 import { coverProgress, containProgress, pageProgress } from './progress';
 
@@ -145,13 +146,13 @@ export const scroll = (options: ScrollOptions = {}): Attachment<MotionElement> =
 		const batch = createFrameBatch(update);
 
 		update();
-		scrollSource.addEventListener('scroll', batch.schedule, { passive: true });
-		window.addEventListener('resize', batch.schedule, { passive: true });
+		const unlistenScroll = listen(scrollSource, { scroll: batch.schedule }, { passive: true });
+		const unlistenResize = listen(window, { resize: batch.schedule }, { passive: true });
 
 		return () => {
 			batch.cancel();
-			scrollSource.removeEventListener('scroll', batch.schedule);
-			window.removeEventListener('resize', batch.schedule);
+			unlistenScroll();
+			unlistenResize();
 			controller?.cancel();
 		};
 	};
