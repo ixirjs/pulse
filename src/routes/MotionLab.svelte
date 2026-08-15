@@ -138,6 +138,10 @@
 		flipItems = [...flipItems].sort(() => Math.random() - 0.5);
 	}
 
+	// 5b. flip({ class }) — flip owns the attribute, so the write and the
+	// measurement happen in the same tick.
+	let flipExpanded = $state(false);
+
 	// 6. flipFrom() — manual expand / collapse. FLIP the card *and* the button
 	// below it: FLIP animates transform, not flow, so the sibling would jump to
 	// the new layout instantly unless it animates from its old rect too.
@@ -587,7 +591,7 @@ controllers = els.map((el, i) =>
 					code={`let items = $state(['A', 'B', 'C', …]);
 
 {#each items as item (item)}
-  <div {@attach flip({ duration: 400, easing: easeInOut, auto: () => { void items; } })}>
+  <div {@attach flip({ duration: 400, easing: easeInOut })}>
     {item}
   </div>
 {/each}`}
@@ -595,13 +599,7 @@ controllers = els.map((el, i) =>
 					<div class="grid grid-cols-3 gap-2">
 						{#each flipItems as item (item)}
 							<div
-								{@attach flip({
-									duration: 400,
-									easing: easeInOut,
-									auto: () => {
-										void flipItems;
-									}
-								})}
+								{@attach flip({ duration: 400, easing: easeInOut })}
 								class="flex size-12 items-center justify-center rounded-lg bg-zinc-100 font-mono text-sm font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
 							>
 								{item}
@@ -609,6 +607,35 @@ controllers = els.map((el, i) =>
 						{/each}
 					</div>
 					{@render trigger('Shuffle', shuffleFlip)}
+				</DemoCard>
+
+				<!-- 5b. flip({ class }) -->
+				<DemoCard
+					title={'flip({ class })'}
+					code={`let expanded = $state(false);
+
+<!-- flip writes the class, then measures and animates
+     the resulting layout change in the same tick -->
+<div
+  {@attach flip({
+    duration: 380,
+    easing: easeInOut,
+    class: () => (expanded ? 'w-48 h-24' : 'w-16 h-16')
+  })}
+  class="rounded-lg bg-indigo-600"
+></div>`}
+				>
+					<div class="flex justify-center">
+						<div
+							{@attach flip({
+								duration: 380,
+								easing: easeInOut,
+								class: () => (flipExpanded ? 'w-48 h-24' : 'w-16 h-16')
+							})}
+							class="rounded-lg bg-indigo-600"
+						></div>
+					</div>
+					{@render trigger('Toggle', () => (flipExpanded = !flipExpanded))}
 				</DemoCard>
 
 				<!-- 6. flipFrom -->
@@ -1084,13 +1111,7 @@ animate(ring, { strokeDashoffset: [C, 0] }, {
 									spring: { stiffness: 380, damping: 30 },
 									onEnd: (info, el) => maybeDismiss(value, info, el)
 								})}
-								{@attach flip({
-									duration: 260,
-									easing: easeOut,
-									auto: () => {
-										void swipeItems;
-									}
-								})}
+								{@attach flip({ duration: 260, easing: easeOut })}
 								class="flex cursor-grab items-center justify-between rounded-lg bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700 select-none active:cursor-grabbing dark:bg-indigo-500/10 dark:text-indigo-300"
 							>
 								{value}
