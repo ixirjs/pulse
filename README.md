@@ -94,6 +94,7 @@ The following shorthands animate independent transform components without clobbe
 ## `flip(options?)` — Svelte 5 attachment
 
 Zero-config FLIP layout animation. Attach to any element that may shift position or size.
+Layout tracking is built in — resizes and `{#each}` reorders animate with no options at all.
 
 ```svelte
 <script>
@@ -101,44 +102,50 @@ Zero-config FLIP layout animation. Attach to any element that may shift position
 	let open = $state(false);
 </script>
 
-<!-- Auto-animates whenever the element moves -->
+<!-- Auto-animates whenever the element moves or resizes -->
 <div {@attach flip()}>...</div>
 
 <!-- Custom duration + easing -->
 <div {@attach flip({ duration: 320, easing: cubicOut })}>...</div>
 
-<!-- Reactive: re-measures whenever `open` changes -->
-<div
-	{@attach flip({
-		auto: () => {
-			void open;
-		}
-	})}
->
-	...
-</div>
+<!-- Let flip own the attribute: it applies the class, then measures and
+     animates the resulting layout change in the same tick -->
+<div {@attach flip({ class: () => ({ 'is-open': open }) })}>...</div>
+
+<!-- Same, with inline style -->
+<div {@attach flip({ style: () => (open ? 'height: 320px' : 'height: 64px') })}>...</div>
 
 <!-- Skip the first render (mount) -->
 <div {@attach flip({ skip: (n) => n === 0 })}>...</div>
 ```
 
+`class` and `style` are thunks so their rune dependencies are tracked. Because `flip` writes the
+attribute itself, it measures the element before and after the write and animates the difference
+in the same tick — no extra frame, and nothing to keep in sync by hand.
+
+> Use `flip`'s `class` option **or** a dynamic `class={…}` on the same element, not both: Svelte
+> assigns `className` wholesale and would drop flip's tokens. A static `class="…"` is safe, and
+> `style` never conflicts (it merges per declaration). Neither is applied during SSR — put
+> server-rendered state in markup as well.
+
 ### Flip options
 
-| Option                 | Type                                       | Default    |
-| ---------------------- | ------------------------------------------ | ---------- |
-| `duration`             | `number \| (distance, rects) => number`    | `280`      |
-| `easing`               | `EasingFn \| string`                       | `cubicOut` |
-| `delay`                | `number`                                   | `0`        |
-| `translate`            | `boolean`                                  | `true`     |
-| `scale`                | `boolean`                                  | `true`     |
-| `opacity`              | `boolean \| { from?, to? }`                | —          |
-| `auto`                 | `false \| (() => void) \| ObserverManager` | —          |
-| `skip`                 | `boolean \| (render, rects) => boolean`    | —          |
-| `disablePointerEvents` | `boolean`                                  | —          |
-| `respectReducedMotion` | `boolean`                                  | `true`     |
-| `layoutId`             | `string`                                   | —          |
-| `onStart`              | `(el, rects) => void`                      | —          |
-| `onEnd`                | `(el, { finished, rects }) => void`        | —          |
+| Option                 | Type                                    | Default    |
+| ---------------------- | --------------------------------------- | ---------- |
+| `duration`             | `number \| (distance, rects) => number` | `280`      |
+| `easing`               | `EasingFn \| string`                    | `cubicOut` |
+| `delay`                | `number`                                | `0`        |
+| `translate`            | `boolean`                               | `true`     |
+| `scale`                | `boolean`                               | `true`     |
+| `opacity`              | `boolean \| { from?, to? }`             | —          |
+| `class`                | `() => ClassValue`                      | —          |
+| `style`                | `() => string`                          | —          |
+| `skip`                 | `boolean \| (render, rects) => boolean` | —          |
+| `disablePointerEvents` | `boolean`                               | —          |
+| `respectReducedMotion` | `boolean`                               | `true`     |
+| `layoutId`             | `string`                                | —          |
+| `onStart`              | `(el, rects) => void`                   | —          |
+| `onEnd`                | `(el, { finished, rects }) => void`     | —          |
 
 ### Shared-element transitions (`createFlipScope`)
 

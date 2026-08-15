@@ -2,15 +2,16 @@
  * Public entry point for the FLIP module.
  *
  * Everything a consumer needs — `flip`, `snapshotRect`, `flipFrom`,
- * `createFlipScope`, `anchoredFlip` — lives here. Observers, schedulers, and
- * the layout bridge are internals and deliberately not exported.
+ * `createFlipScope`, `anchoredFlip` — lives here. Observers, schedulers,
+ * attribute application, and the layout bridge are internals and deliberately
+ * not exported.
  */
 
 import type { Attachment } from 'svelte/attachments';
 import type { AnimationController } from '../animate/types';
-import { animateFlip } from './animation/animator';
-import { createFlipAttachment } from './integration/attachment.svelte';
-import { createLayoutBridge } from './integration/bridge';
+import { animateFlip } from './animator';
+import { createFlipAttachment } from './attachment.svelte';
+import { createLayoutBridge } from './bridge';
 import { measure } from './geometry';
 import type { FlipOptions, FlipOptionsInput, FlipRect, FlipScope, MotionElement } from './types';
 
@@ -26,8 +27,9 @@ import type { FlipOptions, FlipOptionsInput, FlipRect, FlipScope, MotionElement 
  * ```svelte
  * <div {@attach flip()}>auto-tracks layout shifts</div>
  * <div {@attach flip({ duration: 320 })}>...</div>
- * <!-- Remeasure when rune dependencies change: -->
- * <div {@attach flip({ auto: () => { void open; } })}>...</div>
+ * <!-- Let flip own the attribute so the change is measured immediately: -->
+ * <div {@attach flip({ class: () => ({ 'is-open': open }) })}>...</div>
+ * <div {@attach flip({ style: () => (open ? 'height: 320px' : 'height: 64px') })}>...</div>
  * ```
  */
 export const flip = <T extends MotionElement>(input?: FlipOptionsInput): Attachment<T> =>
@@ -83,13 +85,10 @@ export type {
 // Low-level re-exports
 // ---------------------------------------------------------------------------
 
-export { createFlipSwitcher } from './integration/switcher.svelte';
-export type { FlipSwitcher, FlipSwitchRole } from './integration/switcher.svelte';
+export { createFlipSwitcher } from './switcher.svelte';
+export type { FlipSwitcher, FlipSwitchRole } from './switcher.svelte';
 
-export { animateFlip } from './animation/animator';
+export { animateFlip } from './animator';
 export { measure } from './geometry';
-// Public because `FlipOptions.auto` accepts an ObserverManager.
-export { createObserverManager } from './tracking/observers';
-export type { ObserverManager } from './tracking/observers';
 
 export type * from './types';

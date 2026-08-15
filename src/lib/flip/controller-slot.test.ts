@@ -13,7 +13,7 @@ const { animateFlipMock } = vi.hoisted(() => ({ animateFlipMock: vi.fn() }));
 vi.mock('./animator', () => ({ animateFlip: animateFlipMock }));
 
 import { createControllerSlot } from './controller-slot';
-import type { FlipAnimateArgs, FlipRect, FlipRectPair } from '../types';
+import type { FlipAnimateArgs, FlipRect, FlipRectPair } from './types';
 
 const rect = (x = 0, y = 0): FlipRect => ({ x, y, width: 10, height: 10 });
 const rects: FlipRectPair = { from: rect(), to: rect(5, 5) };
@@ -121,5 +121,35 @@ describe('createControllerSlot()', () => {
 		slot.cancel();
 		slot.cancel();
 		expect(ctrl.cancel).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('interrupted runs', () => {
+	/** Resolve the duration the slot handed to the most recent animateFlip() call. */
+	const lastDuration = () => {
+		const d = animateFlipMock.mock.calls.at(-1)![0].options.duration;
+		return typeof d === 'function' ? d(0, rects) : d;
+	};
+
+	it('charges elapsed time against each replacement until it hits the floor', () => {
+		animateFlipMock.mockImplementation(() => ({ cancel: vi.fn(), currentTime: 100 }));
+		const slot = createControllerSlot();
+
+		slot.run(args({ options: { duration: 400 } }));
+		expect(lastDuration()).toBe(400);
+
+		slot.run(args({ options: { duration: 400 } }));
+		expect(lastDuration()).toBe(300);
+
+		slot.run(args({ options: { duration: 400 } }));
+		expect(lastDuration()).toBe(200);
+
+		slot.run(args({ options: { duration: 400 } }));
+		expect(lastDuration()).toBe(120); // floored, not 100
+
+		// A natural finish ends the burst — the next run gets the full duration.
+		lastWrappedOnEnd()({} as Element, { finished: true, rects });
+		slot.run(args({ options: { duration: 400 } }));
+		expect(lastDuration()).toBe(400);
 	});
 });

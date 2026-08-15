@@ -1,7 +1,7 @@
 import type { Attachment } from 'svelte/attachments';
+import type { ClassValue } from 'svelte/elements';
 import type { FlipRect, FlipRectPair } from './geometry';
 import type { EasingFn, MotionElement } from '../shared/types';
-import type { ObserverManager } from './tracking/observers';
 
 // ---------------------------------------------------------------------------
 // Core geometry
@@ -16,8 +16,6 @@ export type { FlipRect, FlipRectPair, MotionElement };
 export type FlipEasing = EasingFn | string;
 
 export type FlipDuration = number | ((distance: number, rects: FlipRectPair) => number);
-
-export type FlipAuto = false | (() => void) | ObserverManager;
 
 /**
  * Controls whether a particular reflow cycle should be skipped (no animation
@@ -50,13 +48,24 @@ export interface FlipOptions {
 	 */
 	layoutId?: string;
 	/**
-	 * Control automatic layout tracking.
+	 * Classes applied to the element by the attachment. The thunk is tracked, so
+	 * changing the rune state it reads writes the classes and animates the
+	 * resulting layout change in the same tick.
 	 *
-	 * - `false` / omitted: no automatic tracking
-	 * - `() => void`: remeasure whenever rune state read inside the callback changes
-	 * - `ObserverManager`: use the provided observer manager (see `createObserverManager`)
+	 * Use this *or* a dynamic `class={…}` in markup, not both — Svelte assigns
+	 * `className` wholesale and would drop these tokens. A static `class="…"`
+	 * is safe.
+	 *
+	 * @example `class: () => ({ 'is-open': open })`
 	 */
-	auto?: FlipAuto;
+	class?: () => ClassValue;
+	/**
+	 * Inline style declarations applied to the element by the attachment, as CSS
+	 * text. Tracked and measured exactly like {@link FlipOptions.class}.
+	 *
+	 * @example `style: () => (open ? 'height: 320px' : 'height: 64px')`
+	 */
+	style?: () => string;
 	/** Disable animation entirely (still tracks rects). */
 	disabled?: boolean;
 	/**

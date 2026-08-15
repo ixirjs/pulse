@@ -6,7 +6,7 @@
 import { CSS_EASINGS } from '../easing';
 import type { EasingFn } from '../shared/types';
 import { DEFAULT_EASING } from '../animate/keyframes/easing-utils';
-import { DEFAULT_DURATION, diagonal } from './geometry';
+import { FLIP_DEFAULT_DURATION, diagonal } from './geometry';
 import type {
 	FlipDuration,
 	FlipEasing,
@@ -29,7 +29,7 @@ export const readOptions = (input: FlipOptionsInput): FlipOptions => {
  * function of the rect-to-rect diagonal distance.
  */
 export const resolveDuration = (d: FlipDuration | undefined, rects: FlipRectPair): number => {
-	if (d == null) return DEFAULT_DURATION;
+	if (d == null) return FLIP_DEFAULT_DURATION;
 	const raw = typeof d === 'function' ? d(diagonal(rects.from, rects.to), rects) : d;
 	return Math.max(0, raw);
 };

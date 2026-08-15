@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { animateFlip } from './animator';
-import { measure } from '../geometry';
+import { measure } from './geometry';
 
 let element: HTMLDivElement | null = null;
 

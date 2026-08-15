@@ -5,7 +5,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { createLayoutBridge } from './bridge';
-import type { FlipRect } from '../types';
+import type { FlipRect } from './types';
 
 const rect = (x = 0, y = 0, w = 100, h = 50): FlipRect => ({
 	x,

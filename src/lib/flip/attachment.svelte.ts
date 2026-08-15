@@ -9,14 +9,15 @@
 
 import { untrack } from 'svelte';
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../../shared/browser';
-import { createFrameBatch } from '../../shared/frame-batch';
+import { isBrowser } from '../shared/browser';
+import { createFrameBatch } from '../shared/frame-batch';
 import type { LayoutBridge } from './bridge';
-import { createControllerSlot } from '../animation/controller-slot';
-import { measure, measureVisual, rectsEqual } from '../geometry';
-import type { ObserverManager } from '../tracking/observers';
-import { readOptions } from '../options';
-import type { FlipAuto, FlipOptions, FlipOptionsInput, FlipRect, MotionElement } from '../types';
+import { createDynamicAttrs } from './dynamic';
+import { createControllerSlot } from './controller-slot';
+import { carryVisualOffset, measure, measureVisual, rectsEqual } from './geometry';
+import { createObserverManager } from './observers';
+import { readOptions } from './options';
+import type { FlipOptions, FlipOptionsInput, FlipRect, MotionElement } from './types';
 
 /**
  * Core FLIP attachment factory. Shared between the standalone `flip()`
@@ -30,7 +31,6 @@ export const createFlipAttachment = (
 		if (!isBrowser()) return;
 
 		let options: FlipOptions = untrack(() => readOptions(input));
-		let auto: FlipAuto | undefined = options.auto;
 		let layoutId = options.layoutId;
 		let prevRect: FlipRect | null = layoutId && bridge ? bridge.readLayout(layoutId) : null;
 		let renderCount = 0;
@@ -46,44 +46,53 @@ export const createFlipAttachment = (
 		const reflow = (): void => {
 			if (!prevRect) return;
 			const next = measure(element);
+			// Count only cycles that would actually animate — observers deliver a
+			// callback on connect, and `skip: (n) => n === 0` must land on the first
+			// real move rather than that no-op.
+			if (rectsEqual(prevRect, next)) {
+				prevRect = next;
+				return;
+			}
 			const render = renderCount++;
 			const { skip } = options;
 			const shouldSkip =
 				typeof skip === 'function' ? skip(render, { from: prevRect, to: next }) : (skip ?? false);
-			if (shouldSkip || rectsEqual(prevRect, next)) {
+			if (shouldSkip) {
 				prevRect = next;
 				return;
 			}
-			// Interrupting an in-flight FLIP: start from the element's live on-screen
-			// rect (transform included) so the replacement run continues from where it
-			// visually is, instead of snapping back to its resting box first. When idle
-			// the element already sits at its new resting box, so the captured `from`
-			// must be the previous rect to produce any movement.
-			const from = slot.isActive() ? measureVisual(element) : prevRect;
+			// Interrupting an in-flight FLIP: continue from where the element was on
+			// screen *before* this layout change. The live transform is an offset from
+			// the element's old resting box, so the visual rect measured now (against
+			// the new box) has to be carried back onto `prevRect` — using it raw would
+			// add the offset to the new slot and fling the element out of place.
+			const from = slot.isActive()
+				? carryVisualOffset(prevRect, next, measureVisual(element))
+				: prevRect;
 			prevRect = next;
 			run(from, next);
 		};
 
-		const scheduler = createFrameBatch(reflow);
-		let connectedManager: ObserverManager | null = null;
-
-		const syncObservers = (): void => {
-			connectedManager?.disconnect();
-			connectedManager = null;
-			if (typeof auto === 'object') {
-				auto.connect(element, scheduler.schedule);
-				connectedManager = auto;
+		// The first scheduled pass after mount only re-baselines: layout is not
+		// settled when the attachment runs (siblings still mounting, fonts, images
+		// loading), so a diff on that pass is the page settling, not a move worth
+		// animating.
+		let primed = false;
+		const scheduler = createFrameBatch(() => {
+			if (!primed) {
+				primed = true;
+				prevRect = measure(element);
+				return;
 			}
-		};
+			reflow();
+		});
+		const observers = createObserverManager();
+		const attrs = createDynamicAttrs(element);
 
 		// -----------------------------------------------------------------
 		// Track option changes (when caller passes a thunk).
 		// -----------------------------------------------------------------
-		let autoEffectVersion = $state(0);
-
 		const applyOptions = (next: FlipOptions): void => {
-			const autoChanged = next.auto !== auto;
-
 			options = next;
 
 			if (next.layoutId !== layoutId) {
@@ -91,25 +100,18 @@ export const createFlipAttachment = (
 				const restored = layoutId && bridge ? bridge.readLayout(layoutId) : null;
 				prevRect = restored ?? measure(element);
 			}
-
-			if (autoChanged) {
-				auto = next.auto;
-				// Use untrack so the read of autoEffectVersion is not registered as a
-				// dependency of the enclosing $effect. Without this, `+= 1` would both
-				// read *and* write the signal inside the same effect, causing Svelte to
-				// immediately re-schedule the effect and loop until depth is exceeded.
-				autoEffectVersion = untrack(() => autoEffectVersion) + 1;
-				syncObservers();
-			}
 		};
 
 		// -----------------------------------------------------------------
 		// Initial enter animation (when restored from a shared-layout entry).
+		// Attributes are applied *before* the first measure so mounting in the
+		// styled state does not animate out of the unstyled one.
 		// -----------------------------------------------------------------
+		untrack(() => attrs.write(options.class?.(), options.style?.()));
 		const initialRect = measure(element);
 		if (prevRect) run(prevRect, initialRect);
 		prevRect = initialRect;
-		syncObservers();
+		observers.connect(element, scheduler.schedule);
 
 		if (typeof input === 'function') {
 			$effect(() => {
@@ -118,13 +120,18 @@ export const createFlipAttachment = (
 			});
 		}
 
-		// Re-run the user's auto thunk whenever its tracked dependencies change.
+		// Reactive class/style. Reads the options thunk directly rather than the
+		// closed-over `options` (a plain `let`, not a signal) so a changed
+		// class/style thunk identity is picked up without extra bookkeeping.
 		$effect(() => {
-			void autoEffectVersion;
-			const trigger = options.auto;
-			if (typeof trigger !== 'function') return;
-			trigger();
-			scheduler.schedule();
+			const current = typeof input === 'function' ? readOptions(input) : options;
+			const classValue = current.class?.();
+			const styleValue = current.style?.();
+			// Write and measure untracked — reflow() reads geometry and reassigns
+			// state that must not become a dependency of this effect.
+			untrack(() => {
+				if (attrs.write(classValue, styleValue)) reflow();
+			});
 		});
 
 		// -----------------------------------------------------------------
@@ -132,9 +139,10 @@ export const createFlipAttachment = (
 		// -----------------------------------------------------------------
 		return () => {
 			scheduler.cancel();
-			connectedManager?.disconnect();
+			observers.disconnect();
 			if (layoutId && bridge && prevRect) bridge.writeLayout(layoutId, prevRect);
 			slot.cancel();
+			attrs.reset();
 		};
 	};
 };

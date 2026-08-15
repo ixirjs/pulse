@@ -7,7 +7,7 @@
  * or two, so anything older is stale by definition.
  */
 
-import type { FlipRect } from '../types';
+import type { FlipRect } from './types';
 
 interface LayoutRecord {
 	rect: FlipRect;
@@ -22,20 +22,18 @@ export interface LayoutBridge {
 /** Lifetime of an unread layout record, in ms. */
 const LAYOUT_TTL_MS = 250;
 
-const now = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now());
-
 /** Create an in-memory, scope-local layout registry. */
 export const createLayoutBridge = (): LayoutBridge => {
 	const registry = new Map<string, LayoutRecord>();
 
 	return {
 		writeLayout: (id, rect) => {
-			registry.set(id, { rect, timestamp: now() });
+			registry.set(id, { rect, timestamp: performance.now() });
 		},
 		readLayout: (id) => {
 			const entry = registry.get(id);
 			if (!entry) return null;
-			if (now() - entry.timestamp > LAYOUT_TTL_MS) {
+			if (performance.now() - entry.timestamp > LAYOUT_TTL_MS) {
 				registry.delete(id);
 				return null;
 			}

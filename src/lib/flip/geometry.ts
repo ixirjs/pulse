@@ -44,7 +44,7 @@ interface DeltaOptions {
 	scale?: boolean;
 }
 
-export const DEFAULT_DURATION = 280;
+export const FLIP_DEFAULT_DURATION = 280;
 
 // ---------------------------------------------------------------------------
 // Measurement
@@ -72,6 +72,27 @@ export const measureVisual = (element: Element): FlipRect => {
 	} = measureWithoutAncestorTransforms(element, { suppressSelf: false });
 	return { x, y, width, height };
 };
+
+/**
+ * Re-express a live visual rect in the *previous* layout frame.
+ *
+ * An in-flight transform is an offset from the element's resting box. Once the
+ * layout changes, that same offset is measured against the *new* box, so the
+ * visual rect is no longer the position the element occupied a moment ago.
+ * Carrying the offset back onto `prev` recovers it, which is what an
+ * interrupting FLIP must animate from — otherwise the offset is added to the
+ * new slot and the element visibly shoots out of place.
+ */
+export const carryVisualOffset = (
+	prev: FlipRect,
+	resting: FlipRect,
+	visual: FlipRect
+): FlipRect => ({
+	x: prev.x + (visual.x - resting.x),
+	y: prev.y + (visual.y - resting.y),
+	width: resting.width > 0 ? prev.width * (visual.width / resting.width) : prev.width,
+	height: resting.height > 0 ? prev.height * (visual.height / resting.height) : prev.height
+});
 
 /** Approximate equality so sub-pixel jitter doesn't trigger reflows. */
 export const rectsEqual = (a: FlipRect, b: FlipRect, epsilon = 0.5): boolean =>

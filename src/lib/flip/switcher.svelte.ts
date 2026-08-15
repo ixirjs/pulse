@@ -20,10 +20,10 @@
 
 import { untrack } from 'svelte';
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../../shared/browser';
-import { createControllerSlot } from '../animation/controller-slot';
-import { measure } from '../geometry';
-import type { FlipOptions, FlipRect, MotionElement } from '../types';
+import { isBrowser } from '../shared/browser';
+import { createControllerSlot } from './controller-slot';
+import { measure } from './geometry';
+import type { FlipOptions, FlipRect, MotionElement } from './types';
 
 // ---------------------------------------------------------------------------
 // Public types

@@ -1,7 +1,7 @@
 import type { AnimationController } from '../animate/types';
 import { saveStyleProp, restoreStyleProp, type SavedStyleProp } from '../shared/inline-style';
 import { isBrowser } from '../shared/browser';
-import { animateFlip } from './animation/animator';
+import { animateFlip } from './animator';
 import { measure } from './geometry';
 import { resolveOpacity } from './options';
 import type { FlipOptions, FlipRect, MotionElement } from './types';
@@ -20,7 +20,7 @@ export interface AnchoredFlipReference {
 export type AnchoredFlipReferenceGetter = () => AnchoredFlipReference | null | undefined;
 
 /** Animation options shared by the anchored enter and exit transitions. */
-export type AnchoredFlipOptions = Omit<FlipOptions, 'auto' | 'layoutId' | 'skip'>;
+export type AnchoredFlipOptions = Omit<FlipOptions, 'layoutId' | 'skip' | 'class' | 'style'>;
 
 /** Framework-neutral lifecycle function suitable for actions, attachments, and node hooks. */
 export type AnchoredFlipNodeFunction = (element: MotionElement) => (() => void) | void;
