@@ -4,6 +4,7 @@
  */
 
 import { isBrowser } from '../../shared/browser';
+import { playbackControls } from '../../shared/playback';
 import type { AnimateDefaults, AnimationController, MotionElement } from '../types';
 import type { CssWrite } from '../keyframes/keyframes';
 
@@ -190,16 +191,6 @@ export const createController = ({
 			if (isBrowser()) commitComputedStyles(element, finalStyles);
 			teardown();
 		},
-		pause: () => forEachAnim((a) => a.pause()),
-		play: () => forEachAnim((a) => a.play()),
-		reverse: () => forEachAnim((a) => a.reverse()),
-		seek: (timeMs: number) =>
-			forEachAnim((a) => {
-				try {
-					a.currentTime = timeMs;
-				} catch {
-					// Animation may have been cancelled — ignore.
-				}
-			})
+		...playbackControls(forEachAnim)
 	};
 };

@@ -23,7 +23,11 @@ import { createController, noopController } from './controller';
 import { buildKeyframes, type KeyframeGroup } from '../keyframes/keyframes';
 import { normalizeInput } from '../keyframes/normalize';
 import { deregisterTransformAnimation, registerTransformAnimation } from '../properties/properties';
-import { ensurePropertiesRegistered, ensureTransformWired } from '../properties/transform-setup';
+import {
+	ensurePropertiesRegistered,
+	ensureTransformWired,
+	wireTransform
+} from '../properties/transform-setup';
 import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from '../types';
 import { isBrowser, shouldReduceMotion } from '../../shared/browser';
 import { formatValue, resolveProp } from '../properties/prop-utils';
@@ -129,8 +133,7 @@ const applyEndStateImmediately = (
 		if (to != null) style.setProperty(def.css, formatValue(to, def));
 	}
 	if (needsTransform) {
-		ensurePropertiesRegistered();
-		ensureTransformWired(element);
+		wireTransform(element);
 	}
 	return noopController(element, defaults);
 };

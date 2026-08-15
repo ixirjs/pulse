@@ -51,3 +51,13 @@ export const ensureTransformWired = (element: MotionElement): void => {
 	style.scale ||= TRANSFORM_TEMPLATES.scale;
 	style.rotate ||= TRANSFORM_TEMPLATES.rotate;
 };
+
+/**
+ * Both halves of the setup an element needs before anything writes `--motion-*`
+ * to it: global property registration plus this element's transform chain.
+ * Every caller needs both, so they are one call.
+ */
+export const wireTransform = (element: MotionElement): void => {
+	ensurePropertiesRegistered();
+	ensureTransformWired(element);
+};
