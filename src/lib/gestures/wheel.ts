@@ -19,14 +19,12 @@
 
 import type { Attachment } from 'svelte/attachments';
 import { isBrowser } from '../shared/browser';
+import { listen } from '../shared/listen';
 import { applyConstraint, type AxisBounds } from './constraints';
 import type { MotionElement } from '../animate';
 import { createSpringValue } from '../animate/spring-value';
 import type { SpringOptions } from '../shared/types';
-import {
-	ensurePropertiesRegistered,
-	ensureTransformWired
-} from '../animate/properties/transform-setup';
+import { wireTransform } from '../animate/properties/transform-setup';
 
 export interface WheelInfo {
 	/** Accumulated scale since the element mounted (baseline 1). */
@@ -60,8 +58,6 @@ export interface WheelableOptions {
 	preventDefault?: boolean;
 	/** Idle time before the gesture is considered ended, ms. Default `120`. */
 	endDelay?: number;
-	/** Disable without removing the attachment. */
-	disabled?: boolean;
 	onStart?: (info: WheelInfo, element: MotionElement) => void;
 	onMove?: (info: WheelInfo, element: MotionElement) => void;
 	onEnd?: (info: WheelInfo, element: MotionElement) => void;
@@ -79,7 +75,6 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 		requireCtrl = false,
 		preventDefault = true,
 		endDelay = 120,
-		disabled = false,
 		smooth = true,
 		onStart,
 		onMove,
@@ -87,7 +82,7 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 	} = options;
 
 	return (element) => {
-		if (!isBrowser() || disabled) return;
+		if (!isBrowser()) return;
 
 		// `scale` is the logical target (what callbacks report); the spring
 		// carries the rendered value smoothly toward it across frames.
@@ -110,8 +105,7 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 
 		let detachSpring: (() => void) | null = null;
 		if (applyTransform) {
-			ensurePropertiesRegistered();
-			ensureTransformWired(element);
+			wireTransform(element);
 			detachSpring =
 				springScale?.subscribe((v) => element.style.setProperty('--motion-scale', `${v}`)) ?? null;
 		}
@@ -150,13 +144,12 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 			endTimer = setTimeout(finish, endDelay);
 		};
 
-		const wheel = onWheel as EventListener;
 		// Non-passive so preventDefault can take effect.
-		element.addEventListener('wheel', wheel, { passive: !preventDefault });
+		const unlisten = listen(element, { wheel: onWheel }, { passive: !preventDefault });
 
 		return () => {
 			if (endTimer != null) clearTimeout(endTimer);
-			element.removeEventListener('wheel', wheel);
+			unlisten();
 			detachSpring?.();
 			springScale?.stop();
 		};

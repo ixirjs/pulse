@@ -23,15 +23,22 @@
 
 import type { Attachment } from 'svelte/attachments';
 import { isBrowser } from '../shared/browser';
+import { listen } from '../shared/listen';
 import { snapshotRect, flipFrom } from '../flip';
 import type { EasingFn } from '../shared/types';
-import {
-	ensurePropertiesRegistered,
-	ensureTransformWired
-} from '../animate/properties/transform-setup';
+import { wireTransform } from '../animate/properties/transform-setup';
 import { restoreStyleProp, saveStyleProp, type SavedStyleProp } from '../shared/inline-style';
-import { capture, release } from './pointer-capture';
-import { centersAreAscending, nearestCenterIndex } from './reorder-internals';
+import { capture, lockTouchAction, release } from './pointer-capture';
+
+/** Find the nearest slot center to `target`. Linear — reorder lists are short. */
+export const nearestCenterIndex = (centers: readonly number[], target: number): number => {
+	if (centers.length === 0) return -1;
+	let nearest = 0;
+	for (let i = 1; i < centers.length; i++) {
+		if (Math.abs(centers[i]! - target) < Math.abs(centers[nearest]! - target)) nearest = i;
+	}
+	return nearest;
+};
 
 export interface ReorderOptions<T> {
 	/** Reactive thunk returning the current ordered list. */
@@ -45,8 +52,6 @@ export interface ReorderOptions<T> {
 	getKey?: (item: T) => unknown;
 	/** Drag axis. Default `'y'`. */
 	axis?: 'x' | 'y';
-	/** Disable dragging without detaching. */
-	disabled?: boolean;
 	/** Settle animation length in ms (the FLIP into the new slot). Default 220. */
 	duration?: number;
 	/** Settle easing. */
@@ -93,10 +98,11 @@ interface DragState {
 	from: number;
 	over: number;
 	centers: number[];
-	centersAscending: boolean;
 	start: number;
 	els: HTMLElement[];
 	styles: Map<HTMLElement, DragStyleSnapshot>;
+	/** Detaches the move/up/cancel listeners this drag installed. */
+	unlisten: () => void;
 }
 
 /** Create a reorder controller for one list. */
@@ -141,11 +147,11 @@ export const reorder = <T>(options: ReorderOptions<T>): ReorderHandle<T> => {
 
 	const onMove = (e: PointerEvent): void => {
 		if (!drag || e.pointerId !== drag.pointerId) return;
-		const { centers, centersAscending, from } = drag;
+		const { centers, from } = drag;
 		const delta = coordOf(e) - drag.start;
 		setReorderOffset(drag.el, horizontal, delta);
 		const targetCenter = centers[from]! + delta;
-		const over = nearestCenterIndex(centers, targetCenter, centersAscending);
+		const over = nearestCenterIndex(centers, targetCenter);
 		if (over !== drag.over) {
 			drag.over = over;
 			layoutSiblings();
@@ -156,9 +162,7 @@ export const reorder = <T>(options: ReorderOptions<T>): ReorderHandle<T> => {
 		if (!drag || e.pointerId !== drag.pointerId) return;
 		const state = drag;
 		const { el, els, from, over, pointerId } = state;
-		el.removeEventListener('pointermove', onMove as EventListener);
-		el.removeEventListener('pointerup', endDrag as EventListener);
-		el.removeEventListener('pointercancel', endDrag as EventListener);
+		state.unlisten();
 		release(el, pointerId);
 		drag = null;
 
@@ -182,9 +186,7 @@ export const reorder = <T>(options: ReorderOptions<T>): ReorderHandle<T> => {
 		if (!drag) return;
 		const state = drag;
 		const { el, pointerId } = state;
-		el.removeEventListener('pointermove', onMove as EventListener);
-		el.removeEventListener('pointerup', endDrag as EventListener);
-		el.removeEventListener('pointercancel', endDrag as EventListener);
+		state.unlisten();
 		release(el, pointerId);
 		drag = null;
 		restoreDrag(state);
@@ -193,7 +195,7 @@ export const reorder = <T>(options: ReorderOptions<T>): ReorderHandle<T> => {
 	const onDown =
 		(el: HTMLElement) =>
 		(e: PointerEvent): void => {
-			if (options.disabled || e.button !== 0 || drag) return;
+			if (e.button !== 0 || drag) return;
 			const order = options.items();
 			const keys = order.map(keyOf);
 			// A value is a safe default key only while it is unique. Refuse an
@@ -215,10 +217,14 @@ export const reorder = <T>(options: ReorderOptions<T>): ReorderHandle<T> => {
 				from,
 				over: from,
 				centers,
-				centersAscending: centersAreAscending(centers),
 				start: coordOf(e),
 				els: rows,
-				styles
+				styles,
+				unlisten: listen(el, {
+					pointermove: onMove,
+					pointerup: endDrag,
+					pointercancel: endDrag
+				})
 			};
 
 			// Reorder owns only its dedicated motion channel and temporary drag
@@ -230,29 +236,23 @@ export const reorder = <T>(options: ReorderOptions<T>): ReorderHandle<T> => {
 			}
 
 			capture(el, e.pointerId);
-			el.addEventListener('pointermove', onMove as EventListener);
-			el.addEventListener('pointerup', endDrag as EventListener);
-			el.addEventListener('pointercancel', endDrag as EventListener);
 		};
 
 	const item =
 		(value: T): Attachment<HTMLElement> =>
 		(el) => {
 			if (!isBrowser()) return;
-			ensurePropertiesRegistered();
-			ensureTransformWired(el);
+			wireTransform(el);
 			const key = keyOf(value);
 			elements.set(key, el);
-			const savedTouchAction = saveStyleProp(el.style, 'touch-action');
-			el.style.setProperty('touch-action', horizontal ? 'pan-y' : 'pan-x');
-			const down = onDown(el);
-			el.addEventListener('pointerdown', down as EventListener);
+			const unlockTouchAction = lockTouchAction(el, horizontal ? 'x' : 'y');
+			const unlisten = listen(el, { pointerdown: onDown(el) });
 			return () => {
 				if (drag?.els.includes(el)) cancelDrag();
 				cancelPendingSettle();
-				el.removeEventListener('pointerdown', down as EventListener);
+				unlisten();
 				if (elements.get(key) === el) elements.delete(key);
-				restoreStyleProp(el.style, 'touch-action', savedTouchAction);
+				unlockTouchAction();
 			};
 		};
 

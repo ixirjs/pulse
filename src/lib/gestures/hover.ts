@@ -16,6 +16,7 @@
 
 import type { Attachment } from 'svelte/attachments';
 import { isBrowser } from '../shared/browser';
+import { listen } from '../shared/listen';
 import type { MotionElement } from '../animate';
 
 export interface HoverableOptions {
@@ -23,16 +24,14 @@ export interface HoverableOptions {
 	onHoverEnd?: (element: MotionElement, event: PointerEvent) => void;
 	/** Also react to touch pointers. Default false (mouse/pen only). */
 	includeTouch?: boolean;
-	/** Disable without removing the attachment. */
-	disabled?: boolean;
 }
 
 /** Create a hover attachment. */
 export const hoverable = (options: HoverableOptions = {}): Attachment<MotionElement> => {
-	const { onHoverStart, onHoverEnd, includeTouch = false, disabled = false } = options;
+	const { onHoverStart, onHoverEnd, includeTouch = false } = options;
 
 	return (element) => {
-		if (!isBrowser() || disabled) return;
+		if (!isBrowser()) return;
 
 		const ignore = (event: PointerEvent): boolean => !includeTouch && event.pointerType === 'touch';
 
@@ -43,14 +42,6 @@ export const hoverable = (options: HoverableOptions = {}): Attachment<MotionElem
 			if (!ignore(event)) onHoverEnd?.(element, event);
 		};
 
-		const enter = onEnter as EventListener;
-		const leave = onLeave as EventListener;
-		element.addEventListener('pointerenter', enter);
-		element.addEventListener('pointerleave', leave);
-
-		return () => {
-			element.removeEventListener('pointerenter', enter);
-			element.removeEventListener('pointerleave', leave);
-		};
+		return listen(element, { pointerenter: onEnter, pointerleave: onLeave });
 	};
 };
