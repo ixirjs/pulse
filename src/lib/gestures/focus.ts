@@ -19,22 +19,21 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
+import { isBrowser } from '../shared/browser';
+import { listen } from '../shared/listen';
+import type { MotionElement } from '../animate';
 
 export interface FocusableOptions {
 	onFocusStart?: (element: MotionElement, event: FocusEvent) => void;
 	onFocusEnd?: (element: MotionElement, event: FocusEvent) => void;
-	/** Disable without removing the attachment. */
-	disabled?: boolean;
 }
 
 /** Create a focus attachment. */
 export const focusable = (options: FocusableOptions = {}): Attachment<MotionElement> => {
-	const { onFocusStart, onFocusEnd, disabled = false } = options;
+	const { onFocusStart, onFocusEnd } = options;
 
 	return (element) => {
-		if (!isBrowser() || disabled) return;
+		if (!isBrowser()) return;
 
 		let focused = false;
 
@@ -53,14 +52,6 @@ export const focusable = (options: FocusableOptions = {}): Attachment<MotionElem
 			onFocusEnd?.(element, event);
 		};
 
-		const focusIn = onFocusIn as EventListener;
-		const focusOut = onFocusOut as EventListener;
-		element.addEventListener('focusin', focusIn);
-		element.addEventListener('focusout', focusOut);
-
-		return () => {
-			element.removeEventListener('focusin', focusIn);
-			element.removeEventListener('focusout', focusOut);
-		};
+		return listen(element, { focusin: onFocusIn, focusout: onFocusOut });
 	};
 };

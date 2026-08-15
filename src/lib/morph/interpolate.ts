@@ -8,6 +8,7 @@
  * DOM-free and pure.
  */
 
+import { lerp } from '../shared/math';
 import { normalizePath, type CubicSegment, type Point, type Subpath } from './normalize';
 
 const lerpPoint = (a: Point, b: Point, t: number): Point => [
@@ -40,7 +41,7 @@ const segmentStarts = (subpath: Subpath): Point[] => {
 };
 
 /** Grow a subpath to exactly `count` segments by subdividing the longest ones. */
-export const subdivideTo = (subpath: Subpath, count: number): Subpath => {
+const subdivideTo = (subpath: Subpath, count: number): Subpath => {
 	const starts = segmentStarts(subpath);
 	const items = subpath.segments.map((seg, i) => ({ start: starts[i]!, seg }));
 
@@ -66,7 +67,7 @@ export const subdivideTo = (subpath: Subpath, count: number): Subpath => {
 };
 
 /** Make two subpaths share an equal segment count. */
-export const alignSubpaths = (a: Subpath, b: Subpath): [Subpath, Subpath] => {
+const alignSubpaths = (a: Subpath, b: Subpath): [Subpath, Subpath] => {
 	if (a.segments.length < b.segments.length) return [subdivideTo(a, b.segments.length), b];
 	if (b.segments.length < a.segments.length) return [a, subdivideTo(b, a.segments.length)];
 	return [a, b];
@@ -90,7 +91,7 @@ const anchorsOf = (sp: Subpath): Point[] => {
  * is geometrically identical — only the starting anchor (and therefore the
  * point-correspondence with another path) changes.
  */
-export const rotateClosed = (sp: Subpath, k: number): Subpath => {
+const rotateClosed = (sp: Subpath, k: number): Subpath => {
 	const n = sp.segments.length;
 	const r = ((k % n) + n) % n;
 	if (r === 0) return sp;
@@ -102,7 +103,7 @@ export const rotateClosed = (sp: Subpath, k: number): Subpath => {
 };
 
 /** Reverse a closed subpath's winding (same start anchor, opposite direction). */
-export const reverseClosed = (sp: Subpath): Subpath => {
+const reverseClosed = (sp: Subpath): Subpath => {
 	const n = sp.segments.length;
 	const anchors = anchorsOf(sp);
 	const segments: CubicSegment[] = [];
@@ -120,7 +121,7 @@ export const reverseClosed = (sp: Subpath): Subpath => {
  * rings of equal segment count; open paths are returned unchanged (their start
  * and end are fixed and must not rotate).
  */
-export const minimizeAnchorTravel = (from: Subpath, to: Subpath): Subpath => {
+const minimizeAnchorTravel = (from: Subpath, to: Subpath): Subpath => {
 	const n = from.segments.length;
 	if (!from.closed || !to.closed || n < 2 || to.segments.length !== n) return from;
 
@@ -142,37 +143,10 @@ export const minimizeAnchorTravel = (from: Subpath, to: Subpath): Subpath => {
 	return best;
 };
 
-const interpolateSubpath = (a: Subpath, b: Subpath, t: number): Subpath => ({
-	start: lerpPoint(a.start, b.start, t),
-	segments: a.segments.map((sa, i) => {
-		const sb = b.segments[i]!;
-		return {
-			c1: lerpPoint(sa.c1, sb.c1, t),
-			c2: lerpPoint(sa.c2, sb.c2, t),
-			end: lerpPoint(sa.end, sb.end, t)
-		};
-	}),
-	closed: t < 0.5 ? a.closed : b.closed
-});
-
 const num = (n: number): string => {
 	const r = Math.round(n * 1000) / 1000;
 	return Object.is(r, -0) ? '0' : String(r);
 };
-
-const point = (p: Point): string => `${num(p[0])} ${num(p[1])}`;
-
-/** Serialize normalized cubic subpaths back into a path `d` string. */
-export const toPathString = (subpaths: Subpath[]): string =>
-	subpaths
-		.map((sp) => {
-			const head = `M${point(sp.start)}`;
-			const body = sp.segments
-				.map((s) => `C${point(s.c1)} ${point(s.c2)} ${point(s.end)}`)
-				.join('');
-			return head + body + (sp.closed ? 'Z' : '');
-		})
-		.join('');
 
 export interface MorphPlan {
 	/** Whether the two paths share a structure that can be morphed point-for-point. */
@@ -207,5 +181,21 @@ export const planMorph = (from: string, to: string, optimize = true): MorphPlan 
 };
 
 /** Interpolate a prepared, aligned plan at progress `t` into a `d` string. */
-export const interpolatePlan = (plan: MorphPlan, t: number): string =>
-	toPathString(plan.from.map((sp, i) => interpolateSubpath(sp, plan.to[i]!, t)));
+export const interpolatePlan = (plan: MorphPlan, t: number): string => {
+	let path = '';
+	for (let i = 0; i < plan.from.length; i++) {
+		const from = plan.from[i]!;
+		const to = plan.to[i]!;
+		path += `M${num(lerp(from.start[0], to.start[0], t))} ${num(lerp(from.start[1], to.start[1], t))}`;
+		for (let j = 0; j < from.segments.length; j++) {
+			const a = from.segments[j]!;
+			const b = to.segments[j]!;
+			path +=
+				`C${num(lerp(a.c1[0], b.c1[0], t))} ${num(lerp(a.c1[1], b.c1[1], t))}` +
+				` ${num(lerp(a.c2[0], b.c2[0], t))} ${num(lerp(a.c2[1], b.c2[1], t))}` +
+				` ${num(lerp(a.end[0], b.end[0], t))} ${num(lerp(a.end[1], b.end[1], t))}`;
+		}
+		if (t < 0.5 ? from.closed : to.closed) path += 'Z';
+	}
+	return path;
+};

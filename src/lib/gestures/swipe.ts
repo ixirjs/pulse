@@ -13,9 +13,11 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
-import { capture, release } from './pointer-capture';
+import { isBrowser } from '../shared/browser';
+import { listen } from '../shared/listen';
+import { trackVelocity } from './velocity';
+import type { MotionElement } from '../animate';
+import { capture, lockTouchAction, release } from './pointer-capture';
 
 export type SwipeAxis = 'x' | 'y' | 'both';
 export type SwipeDirection = 'left' | 'right' | 'up' | 'down';
@@ -37,63 +39,37 @@ export interface SwipeableOptions {
 	threshold?: number;
 	/** Release speed that counts as a swipe regardless of distance, px/s. Default `300`. */
 	velocityThreshold?: number;
-	/** Disable without removing the attachment. */
-	disabled?: boolean;
 	onSwipe?: (direction: SwipeDirection, info: SwipeInfo, element: MotionElement) => void;
 }
 
-const touchActionFor = (axis: SwipeAxis): string =>
-	axis === 'x' ? 'pan-y' : axis === 'y' ? 'pan-x' : 'none';
-
 /** Create a swipeable attachment. */
 export const swipeable = (options: SwipeableOptions = {}): Attachment<MotionElement> => {
-	const {
-		axis = 'both',
-		threshold = 30,
-		velocityThreshold = 300,
-		disabled = false,
-		onSwipe
-	} = options;
+	const { axis = 'both', threshold = 30, velocityThreshold = 300, onSwipe } = options;
 
 	return (element) => {
-		if (!isBrowser() || disabled) return;
+		if (!isBrowser()) return;
 
-		const prevTouchAction = element.style.touchAction;
-		element.style.touchAction = touchActionFor(axis);
+		const unlockTouchAction = lockTouchAction(element, axis);
 
 		let tracking = false;
 		let pointerId = -1;
 		let startX = 0;
 		let startY = 0;
-		// Velocity from the last two pointer samples.
-		let lastX = 0;
-		let lastY = 0;
-		let lastT = 0;
-		let velX = 0;
-		let velY = 0;
+		const velocity = trackVelocity();
 
 		const onPointerDown = (event: PointerEvent): void => {
 			if (tracking || event.button !== 0) return;
 			tracking = true;
 			pointerId = event.pointerId;
 			capture(element, pointerId);
-			startX = lastX = event.clientX;
-			startY = lastY = event.clientY;
-			lastT = event.timeStamp;
-			velX = 0;
-			velY = 0;
+			startX = event.clientX;
+			startY = event.clientY;
+			velocity.reset(event);
 		};
 
 		const onPointerMove = (event: PointerEvent): void => {
 			if (!tracking || event.pointerId !== pointerId) return;
-			const dt = (event.timeStamp - lastT) / 1000;
-			if (dt > 0) {
-				velX = (event.clientX - lastX) / dt;
-				velY = (event.clientY - lastY) / dt;
-			}
-			lastX = event.clientX;
-			lastY = event.clientY;
-			lastT = event.timeStamp;
+			velocity.sample(event);
 		};
 
 		const onPointerUp = (event: PointerEvent): void => {
@@ -108,7 +84,7 @@ export const swipeable = (options: SwipeableOptions = {}): Attachment<MotionElem
 			// axis only — so an axis-locked swipe never fires from cross-axis travel.
 			const horizontal = axis === 'x' ? true : axis === 'y' ? false : Math.abs(dx) >= Math.abs(dy);
 			const distance = horizontal ? Math.abs(dx) : Math.abs(dy);
-			const speed = horizontal ? Math.abs(velX) : Math.abs(velY);
+			const speed = horizontal ? Math.abs(velocity.x) : Math.abs(velocity.y);
 			if (distance < threshold && speed < velocityThreshold) return;
 
 			const direction: SwipeDirection = horizontal
@@ -120,7 +96,7 @@ export const swipeable = (options: SwipeableOptions = {}): Attachment<MotionElem
 					: 'up';
 			onSwipe?.(
 				direction,
-				{ direction, distanceX: dx, distanceY: dy, velocityX: velX, velocityY: velY },
+				{ direction, distanceX: dx, distanceY: dy, velocityX: velocity.x, velocityY: velocity.y },
 				element
 			);
 		};
@@ -132,21 +108,16 @@ export const swipeable = (options: SwipeableOptions = {}): Attachment<MotionElem
 			}
 		};
 
-		const down = onPointerDown as EventListener;
-		const move = onPointerMove as EventListener;
-		const up = onPointerUp as EventListener;
-		const cancel = onCancel as EventListener;
-		element.addEventListener('pointerdown', down);
-		element.addEventListener('pointermove', move);
-		element.addEventListener('pointerup', up);
-		element.addEventListener('pointercancel', cancel);
+		const unlisten = listen(element, {
+			pointerdown: onPointerDown,
+			pointermove: onPointerMove,
+			pointerup: onPointerUp,
+			pointercancel: onCancel
+		});
 
 		return () => {
-			element.removeEventListener('pointerdown', down);
-			element.removeEventListener('pointermove', move);
-			element.removeEventListener('pointerup', up);
-			element.removeEventListener('pointercancel', cancel);
-			element.style.touchAction = prevTouchAction;
+			unlisten();
+			unlockTouchAction();
 		};
 	};
 };

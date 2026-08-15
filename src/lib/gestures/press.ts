@@ -23,8 +23,9 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
+import { isBrowser } from '../shared/browser';
+import { listen } from '../shared/listen';
+import type { MotionElement } from '../animate';
 import { capture, release } from './pointer-capture';
 
 export interface PressableOptions {
@@ -42,8 +43,6 @@ export interface PressableOptions {
 	longPressDelay?: number;
 	/** Maximum gap between two presses to count as a double tap, ms. Default `300`. */
 	doubleTapDelay?: number;
-	/** Disable without removing the attachment. */
-	disabled?: boolean;
 }
 
 /** Create a press attachment. */
@@ -55,12 +54,11 @@ export const pressable = (options: PressableOptions = {}): Attachment<MotionElem
 		onLongPress,
 		onDoubleTap,
 		longPressDelay = 500,
-		doubleTapDelay = 300,
-		disabled = false
+		doubleTapDelay = 300
 	} = options;
 
 	return (element) => {
-		if (!isBrowser() || disabled) return;
+		if (!isBrowser()) return;
 
 		let pressed = false;
 		let pointerId = -1;
@@ -121,18 +119,15 @@ export const pressable = (options: PressableOptions = {}): Attachment<MotionElem
 			if (event.pointerId === pointerId) end(false, event.timeStamp);
 		};
 
-		const down = onDown as EventListener;
-		const up = onUp as EventListener;
-		const cancel = onCancel as EventListener;
-		element.addEventListener('pointerdown', down);
-		element.addEventListener('pointerup', up);
-		element.addEventListener('pointercancel', cancel);
+		const unlisten = listen(element, {
+			pointerdown: onDown,
+			pointerup: onUp,
+			pointercancel: onCancel
+		});
 
 		return () => {
 			clearLongPress();
-			element.removeEventListener('pointerdown', down);
-			element.removeEventListener('pointerup', up);
-			element.removeEventListener('pointercancel', cancel);
+			unlisten();
 		};
 	};
 };

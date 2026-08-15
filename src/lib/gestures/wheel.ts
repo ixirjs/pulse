@@ -18,14 +18,13 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
-import { createSpringValue } from '$lib/animate/spring-value';
-import type { SpringOptions } from '$lib/shared/types';
-import {
-	ensurePropertiesRegistered,
-	ensureTransformWired
-} from '$lib/animate/properties/transform-setup';
+import { isBrowser } from '../shared/browser';
+import { listen } from '../shared/listen';
+import { applyConstraint, type AxisBounds } from './constraints';
+import type { MotionElement } from '../animate';
+import { createSpringValue } from '../animate/spring-value';
+import type { SpringOptions } from '../shared/types';
+import { wireTransform } from '../animate/properties/transform-setup';
 
 export interface WheelInfo {
 	/** Accumulated scale since the element mounted (baseline 1). */
@@ -41,7 +40,7 @@ export interface WheelableOptions {
 	/** Write `--motion-scale` on each tick. Default `true`. */
 	applyTransform?: boolean;
 	/** Clamp the reported (and applied) scale. */
-	scaleBounds?: { min?: number; max?: number };
+	scaleBounds?: AxisBounds;
 	/** Zoom sensitivity per wheel unit. Default `0.01`. */
 	speed?: number;
 	/**
@@ -59,8 +58,6 @@ export interface WheelableOptions {
 	preventDefault?: boolean;
 	/** Idle time before the gesture is considered ended, ms. Default `120`. */
 	endDelay?: number;
-	/** Disable without removing the attachment. */
-	disabled?: boolean;
 	onStart?: (info: WheelInfo, element: MotionElement) => void;
 	onMove?: (info: WheelInfo, element: MotionElement) => void;
 	onEnd?: (info: WheelInfo, element: MotionElement) => void;
@@ -68,14 +65,6 @@ export interface WheelableOptions {
 
 /** Snappy, overshoot-free spring tuned for zoom — near-critical damping. */
 const SMOOTH_DEFAULTS: SpringOptions = { stiffness: 260, damping: 32 };
-
-const clampScale = (scale: number, bounds?: { min?: number; max?: number }): number => {
-	if (!bounds) return scale;
-	let next = scale;
-	if (bounds.min !== undefined) next = Math.max(bounds.min, next);
-	if (bounds.max !== undefined) next = Math.min(bounds.max, next);
-	return next;
-};
 
 /** Create a wheelable (wheel-zoom) attachment. */
 export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElement> => {
@@ -86,7 +75,6 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 		requireCtrl = false,
 		preventDefault = true,
 		endDelay = 120,
-		disabled = false,
 		smooth = true,
 		onStart,
 		onMove,
@@ -94,7 +82,7 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 	} = options;
 
 	return (element) => {
-		if (!isBrowser() || disabled) return;
+		if (!isBrowser()) return;
 
 		// `scale` is the logical target (what callbacks report); the spring
 		// carries the rendered value smoothly toward it across frames.
@@ -117,8 +105,7 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 
 		let detachSpring: (() => void) | null = null;
 		if (applyTransform) {
-			ensurePropertiesRegistered();
-			ensureTransformWired(element);
+			wireTransform(element);
 			detachSpring =
 				springScale?.subscribe((v) => element.style.setProperty('--motion-scale', `${v}`)) ?? null;
 		}
@@ -142,7 +129,7 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 
 			lastCenter = { x: event.clientX, y: event.clientY };
 			// Multiplicative zoom: scrolling up (negative deltaY) zooms in.
-			scale = clampScale(scale * Math.exp(-event.deltaY * speed), scaleBounds);
+			scale = applyConstraint(scale * Math.exp(-event.deltaY * speed), scaleBounds ?? {});
 
 			if (!active) {
 				active = true;
@@ -157,13 +144,12 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 			endTimer = setTimeout(finish, endDelay);
 		};
 
-		const wheel = onWheel as EventListener;
 		// Non-passive so preventDefault can take effect.
-		element.addEventListener('wheel', wheel, { passive: !preventDefault });
+		const unlisten = listen(element, { wheel: onWheel }, { passive: !preventDefault });
 
 		return () => {
 			if (endTimer != null) clearTimeout(endTimer);
-			element.removeEventListener('wheel', wheel);
+			unlisten();
 			detachSpring?.();
 			springScale?.stop();
 		};

@@ -3,7 +3,7 @@
  * browser. Runs in the `client` project.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { reorder } from './reorder';
 
 let container: HTMLElement | null = null;
@@ -29,6 +29,7 @@ const setup = () => {
 };
 
 afterEach(() => {
+	vi.restoreAllMocks();
 	container?.remove();
 	container = null;
 });
@@ -49,6 +50,30 @@ describe('reorder()', () => {
 		els[0]!.dispatchEvent(pointer('pointerup', 70));
 
 		expect(order).toEqual(['b', 'a', 'c']);
+	});
+
+	it('composes drag offsets without replacing consumer transforms and restores owned styles', () => {
+		const { values, els } = setup();
+		let order = [...values];
+		els[0]!.style.transform = 'rotate(12deg)';
+		els[1]!.style.transition = 'opacity 100ms';
+		const r = reorder<string>({ items: () => order, onReorder: (next) => (order = next) });
+		els.forEach((el, i) => r.item(values[i]!)(el));
+
+		els[0]!.dispatchEvent(pointer('pointerdown', 20));
+		els[0]!.dispatchEvent(pointer('pointermove', 70));
+
+		expect(els[0]!.style.transform).toBe('rotate(12deg)');
+		expect(els[0]!.style.getPropertyValue('--motion-reorder-y')).toBe('50px');
+		expect(Number.parseFloat(els[1]!.style.getPropertyValue('--motion-reorder-y'))).toBeCloseTo(
+			-40
+		);
+
+		els[0]!.dispatchEvent(pointer('pointerup', 70));
+		expect(order).toEqual(['b', 'a', 'c']);
+		expect(els[0]!.style.transform).toBe('rotate(12deg)');
+		expect(els[0]!.style.getPropertyValue('--motion-reorder-y')).toBe('');
+		expect(els[1]!.style.transition).toBe('opacity 100ms');
 	});
 
 	it('does not reorder when the drag stays within its own slot', () => {
@@ -83,6 +108,75 @@ describe('reorder()', () => {
 		els[0]!.dispatchEvent(pointer('pointerup', 120));
 
 		expect(order).toEqual(['b', 'c', 'a']);
+	});
+
+	it('uses actual slot centers for variable-size rows', () => {
+		const { values, els } = setup();
+		els[0]!.style.height = '20px';
+		els[1]!.style.top = '20px';
+		els[1]!.style.height = '100px';
+		els[2]!.style.top = '120px';
+		let order = [...values];
+		const r = reorder<string>({ items: () => order, onReorder: (next) => (order = next) });
+		els.forEach((el, i) => r.item(values[i]!)(el));
+
+		// The second row's center is 70px, not the old average-stride slot at 80px.
+		els[0]!.dispatchEvent(pointer('pointerdown', 10));
+		els[0]!.dispatchEvent(pointer('pointermove', 60));
+		els[0]!.dispatchEvent(pointer('pointerup', 60));
+
+		expect(order).toEqual(['b', 'a', 'c']);
+	});
+
+	it('supports recreated or duplicate values through a stable getKey', () => {
+		const { els } = setup();
+		let order = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+		const r = reorder({
+			items: () => order,
+			getKey: (item) => item.id,
+			onReorder: (next) => (order = next)
+		});
+		order.forEach((item, i) => r.item(item)(els[i]!));
+
+		els[0]!.dispatchEvent(pointer('pointerdown', 20));
+		els[0]!.dispatchEvent(pointer('pointermove', 70));
+		els[0]!.dispatchEvent(pointer('pointerup', 70));
+
+		expect(order.map((item) => item.id)).toEqual(['b', 'a', 'c']);
+	});
+
+	it('cancels an active drag and restores owned styles on detach', () => {
+		const { values, els } = setup();
+		let order = [...values];
+		const r = reorder<string>({ items: () => order, onReorder: (next) => (order = next) });
+		const cleanup = r.item(values[0]!)(els[0]!);
+		els.slice(1).forEach((el, i) => r.item(values[i + 1]!)(el));
+
+		els[0]!.dispatchEvent(pointer('pointerdown', 20));
+		els[0]!.dispatchEvent(pointer('pointermove', 70));
+		cleanup?.();
+
+		expect(els[0]!.style.getPropertyValue('--motion-reorder-y')).toBe('');
+		expect(order).toEqual(['a', 'b', 'c']);
+	});
+
+	it('cancels the scheduled FLIP handoff when detached after drop', () => {
+		const { values, els } = setup();
+		let order = [...values];
+		const requestFrame = vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(42);
+		const cancelFrame = vi.spyOn(window, 'cancelAnimationFrame');
+		const r = reorder<string>({ items: () => order, onReorder: (next) => (order = next) });
+		const cleanup = r.item(values[0]!)(els[0]!);
+		els.slice(1).forEach((el, i) => r.item(values[i + 1]!)(el));
+
+		els[0]!.dispatchEvent(pointer('pointerdown', 20));
+		els[0]!.dispatchEvent(pointer('pointermove', 70));
+		els[0]!.dispatchEvent(pointer('pointerup', 70));
+		cleanup?.();
+
+		expect(order).toEqual(['b', 'a', 'c']);
+		expect(requestFrame).toHaveBeenCalledTimes(1);
+		expect(cancelFrame).toHaveBeenCalledWith(42);
 	});
 
 	it('detaches cleanly (cleanup removes the listener)', () => {

@@ -11,7 +11,8 @@ import type { SpringOptions } from './types';
 const DT_MS = 1000 / 60;
 const MAX_DURATION_MS = 10_000;
 
-const SPRING_DEFAULTS = {
+/** The library's default spring feel — shared by the sampled spring and the live integrator. */
+export const SPRING_DEFAULTS = {
 	stiffness: 170,
 	damping: 26,
 	mass: 1,
@@ -88,6 +89,13 @@ export const getCachedSpring = (options: SpringOptions = {}): CachedSpring => {
 	SPRING_CACHE.set(key, entry);
 	return entry;
 };
+
+/**
+ * Simulate a spring travelling from 0 → 1 and return per-frame normalized
+ * samples plus the settling duration. Results are memoized by option key.
+ */
+export const spring = (options: SpringOptions = {}): SpringSamples =>
+	getCachedSpring(options).spring;
 
 const simulateSpring = (options: SpringOptions): SpringSamples => {
 	const { stiffness, damping, mass, restDelta, restSpeed, velocity } = withSpringDefaults(options);

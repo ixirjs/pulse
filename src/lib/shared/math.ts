@@ -1,10 +1,7 @@
-/**
- * Tiny numeric clamps shared across the animation modules so the same
- * bound-checking lives in one place instead of being re-spelled inline.
- */
+/** Scalar helpers shared across the animation, scroll and interpolation code. */
 
-/** Clamp `n` to be non-negative (≥ 0). */
-export const atLeast0 = (n: number): number => Math.max(0, n);
+/** Linear interpolation between `a` and `b` at `t`. */
+export const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
-/** Clamp `n` into the inclusive `[0, 1]` range. */
+/** Clamp into `[0, 1]`. */
 export const clamp01 = (n: number): number => Math.min(1, Math.max(0, n));

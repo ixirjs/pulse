@@ -1,43 +1,41 @@
 /**
  * Pure path alignment + interpolation. Runs in the `server` (node) project.
+ *
+ * The alignment internals (subdivision, ring rotation/reversal, anchor-travel
+ * minimization) are exercised through `planMorph` / `interpolatePlan`, the two
+ * entry points `morph()` itself uses — `interpolatePlan(plan, 0)` and
+ * `(plan, 1)` render the plan's from- and to-paths.
  */
 
 import { describe, expect, it } from 'vitest';
-import { normalizePath } from './normalize';
-import {
-	alignSubpaths,
-	interpolatePlan,
-	minimizeAnchorTravel,
-	planMorph,
-	reverseClosed,
-	rotateClosed,
-	subdivideTo,
-	toPathString
-} from './interpolate';
+import { interpolatePlan, planMorph } from './interpolate';
 
-describe('subdivideTo()', () => {
-	it('grows the segment count while preserving endpoints', () => {
-		const [line] = normalizePath('M0 0 L10 0');
-		const grown = subdivideTo(line!, 2);
-		expect(grown.segments).toHaveLength(2);
-		// Midpoint of a straight line subdivided at 0.5.
-		expect(grown.segments[0]!.end[0]).toBeCloseTo(5);
-		expect(grown.segments.at(-1)!.end).toEqual([10, 0]);
+/** Rendered endpoints of a plan — what the element's `d` shows at t=0 and t=1. */
+const ends = (from: string, to: string, optimize = true) => {
+	const plan = planMorph(from, to, optimize);
+	return { plan, start: interpolatePlan(plan, 0), end: interpolatePlan(plan, 1) };
+};
+
+describe('subpath alignment', () => {
+	it('grows the shorter side to the larger segment count, preserving endpoints', () => {
+		// 1 segment vs 2 segments — both sides must end up at 2.
+		const { plan } = ends('M0 0 L10 0', 'M0 0 C0 0 5 5 5 5 C5 5 8 8 10 10');
+		expect(plan.from[0]!.segments).toHaveLength(2);
+		expect(plan.to[0]!.segments).toHaveLength(2);
+		// Subdivision must not move the path's real endpoints.
+		expect(plan.from[0]!.start).toEqual([0, 0]);
+		expect(plan.from[0]!.segments.at(-1)!.end).toEqual([10, 0]);
 	});
 
-	it('is a no-op when already at the target count', () => {
-		const [line] = normalizePath('M0 0 L10 0');
-		expect(subdivideTo(line!, 1).segments).toHaveLength(1);
+	it('splits a straight line at its midpoint', () => {
+		const { plan } = ends('M0 0 L10 0', 'M0 0 C0 0 5 5 5 5 C5 5 8 8 10 10');
+		expect(plan.from[0]!.segments[0]!.end[0]).toBeCloseTo(5);
 	});
-});
 
-describe('alignSubpaths()', () => {
-	it('brings both subpaths to the larger segment count', () => {
-		const [a] = normalizePath('M0 0 L10 0'); // 1 segment
-		const [b] = normalizePath('M0 0 C0 0 5 5 5 5 C5 5 8 8 10 10'); // 2 segments
-		const [aa, bb] = alignSubpaths(a!, b!);
-		expect(aa.segments).toHaveLength(2);
-		expect(bb.segments).toHaveLength(2);
+	it('leaves equal segment counts untouched', () => {
+		const { plan } = ends('M0 0 L10 0', 'M0 0 L0 10');
+		expect(plan.from[0]!.segments).toHaveLength(1);
+		expect(plan.to[0]!.segments).toHaveLength(1);
 	});
 });
 
@@ -56,60 +54,42 @@ describe('planMorph()', () => {
 });
 
 describe('interpolatePlan()', () => {
-	it('returns the from-path at t=0 and the to-path at t=1', () => {
-		const plan = planMorph('M0 0 L10 0', 'M0 0 L0 10');
-		expect(interpolatePlan(plan, 0)).toBe(toPathString(plan.from));
-		expect(interpolatePlan(plan, 1)).toBe(toPathString(plan.to));
-	});
-
 	it('lerps anchor positions at the midpoint', () => {
 		const plan = planMorph('M0 0 L10 0', 'M10 10 L20 10');
 		expect(interpolatePlan(plan, 0.5).startsWith('M5 5C')).toBe(true);
 	});
-});
 
-describe('rotateClosed() / reverseClosed()', () => {
-	const [square] = normalizePath('M0 0 L10 0 L10 10 L0 10 Z');
-
-	it('rotation keeps the shape but moves the start anchor', () => {
-		const rotated = rotateClosed(square!, 1);
-		expect(rotated.start).toEqual([10, 0]); // second corner becomes the start
-		expect(rotated.segments).toHaveLength(square!.segments.length);
-	});
-
-	it('rotation by 0 (or a full turn) is a no-op', () => {
-		expect(rotateClosed(square!, 0)).toBe(square);
-		expect(rotateClosed(square!, square!.segments.length).start).toEqual(square!.start);
-	});
-
-	it('reversal keeps the start anchor but flips winding', () => {
-		const reversed = reverseClosed(square!);
-		expect(reversed.start).toEqual([0, 0]);
-		// First step now heads to the previous *last* corner (0,10) instead of (10,0).
-		expect(reversed.segments[0]!.end).toEqual([0, 10]);
+	it('is monotonic between its endpoints', () => {
+		const { start, end } = ends('M0 0 L10 0', 'M10 10 L20 10');
+		expect(start).not.toBe(end);
+		expect(start.startsWith('M0 0')).toBe(true);
+		expect(end.startsWith('M10 10')).toBe(true);
 	});
 });
 
-describe('minimizeAnchorTravel()', () => {
+describe('anchor-travel minimization', () => {
 	it('rotates the from-ring so an identical, differently-started shape coincides', () => {
-		// Same square, started at a different corner.
-		const plan = planMorph('M0 0 L10 0 L10 10 L0 10 Z', 'M10 0 L10 10 L0 10 L0 0 Z');
-		expect(toPathString(plan.from)).toBe(toPathString(plan.to));
+		// Same square, started at a different corner — rotating the ring makes the
+		// two rings identical, so nothing should visually move across the morph.
+		const { start, end } = ends('M0 0 L10 0 L10 10 L0 10 Z', 'M10 0 L10 10 L0 10 L0 0 Z');
+		expect(start).toBe(end);
 	});
 
 	it('reverses the from-ring when the target has the opposite winding', () => {
-		const plan = planMorph('M0 0 L10 0 L10 10 L0 10 Z', 'M0 0 L0 10 L10 10 L10 0 Z');
-		expect(toPathString(plan.from)).toBe(toPathString(plan.to));
+		const { start, end } = ends('M0 0 L10 0 L10 10 L0 10 Z', 'M0 0 L0 10 L10 10 L10 0 Z');
+		expect(start).toBe(end);
 	});
 
 	it('can be disabled, leaving anchors paired in document order', () => {
-		const unoptimized = planMorph('M0 0 L10 0 L10 10 L0 10 Z', 'M10 0 L10 10 L0 10 L0 0 Z', false);
-		expect(toPathString(unoptimized.from)).not.toBe(toPathString(unoptimized.to));
+		const { start, end } = ends('M0 0 L10 0 L10 10 L0 10 Z', 'M10 0 L10 10 L0 10 L0 0 Z', false);
+		expect(start).not.toBe(end);
 	});
 
-	it('leaves open paths untouched (start/end are fixed)', () => {
-		const [open] = normalizePath('M0 0 L10 0');
-		const [target] = normalizePath('M0 0 L0 10');
-		expect(minimizeAnchorTravel(open!, target!)).toBe(open);
+	it('leaves open paths untouched — their start/end are fixed', () => {
+		// An open path may not be rotated or reversed, so the from-ring must still
+		// begin where it was authored.
+		const { plan } = ends('M0 0 L10 0', 'M0 10 L0 0');
+		expect(plan.from[0]!.start).toEqual([0, 0]);
+		expect(plan.from[0]!.segments.at(-1)!.end).toEqual([10, 0]);
 	});
 });

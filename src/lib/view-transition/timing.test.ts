@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { easeOut } from '$lib/easing';
+import { backOut, easeOut } from '$lib/easing';
 import { resolveViewTransitionTiming } from './timing';
 
 describe('resolveViewTransitionTiming()', () => {
@@ -32,15 +32,21 @@ describe('resolveViewTransitionTiming()', () => {
 	});
 
 	it('resamples an EasingFn to a linear() string', () => {
-		const timing = resolveViewTransitionTiming({ easing: easeOut, duration: 300 });
+		const timing = resolveViewTransitionTiming({ easing: backOut, duration: 300 });
 		expect(timing?.easing).toMatch(/^linear\(/);
 		expect(timing?.duration).toBe(300);
 	});
 
 	it('omits duration for an EasingFn when none is given', () => {
-		const timing = resolveViewTransitionTiming({ easing: easeOut });
+		const timing = resolveViewTransitionTiming({ easing: backOut });
 		expect(timing?.easing).toMatch(/^linear\(/);
 		expect(timing && 'duration' in timing).toBe(false);
+	});
+
+	it('emits the CSS keyword for an easing that has an exact keyword form', () => {
+		// `easeOut` *is* cubic-bezier(0, 0, 0.58, 1) — no reason to ship an
+		// approximation of a curve the browser implements natively.
+		expect(resolveViewTransitionTiming({ easing: easeOut })).toEqual({ easing: 'ease-out' });
 	});
 
 	it('passes a CSS easing keyword through unchanged', () => {

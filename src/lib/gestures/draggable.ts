@@ -11,15 +11,14 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
-import type { SpringOptions } from '$lib/shared/types';
-import { createSpringValue } from '$lib/animate/spring-value';
-import { capture, release } from './pointer-capture';
-import {
-	ensurePropertiesRegistered,
-	ensureTransformWired
-} from '$lib/animate/properties/transform-setup';
+import { isBrowser } from '../shared/browser';
+import { listen } from '../shared/listen';
+import { trackVelocity } from './velocity';
+import type { MotionElement } from '../animate';
+import type { SpringOptions } from '../shared/types';
+import { createSpringValue } from '../animate/spring-value';
+import { capture, lockTouchAction, release } from './pointer-capture';
+import { wireTransform } from '../animate/properties/transform-setup';
 import { applyConstraint, xBounds, yBounds, type DragConstraints } from './constraints';
 
 export type DragAxis = 'x' | 'y' | 'both';
@@ -46,15 +45,10 @@ export interface DraggableOptions {
 	snapToOrigin?: boolean;
 	/** Carry release velocity into the settle spring. Default true. */
 	momentum?: boolean;
-	/** Disable dragging without removing the attachment. */
-	disabled?: boolean;
 	onStart?: (info: DragInfo, element: MotionElement) => void;
 	onMove?: (info: DragInfo, element: MotionElement) => void;
 	onEnd?: (info: DragInfo, element: MotionElement) => void;
 }
-
-const touchActionFor = (axis: DragAxis): string =>
-	axis === 'x' ? 'pan-y' : axis === 'y' ? 'pan-x' : 'none';
 
 /** Create a draggable attachment. */
 export const draggable = (options: DraggableOptions = {}): Attachment<MotionElement> => {
@@ -65,19 +59,16 @@ export const draggable = (options: DraggableOptions = {}): Attachment<MotionElem
 		spring,
 		snapToOrigin = false,
 		momentum = true,
-		disabled = false,
 		onStart,
 		onMove,
 		onEnd
 	} = options;
 
 	return (element) => {
-		if (!isBrowser() || disabled) return;
+		if (!isBrowser()) return;
 
-		ensurePropertiesRegistered();
-		ensureTransformWired(element);
-		const prevTouchAction = element.style.touchAction;
-		element.style.touchAction = touchActionFor(axis);
+		wireTransform(element);
+		const unlockTouchAction = lockTouchAction(element, axis);
 
 		const lockX = axis === 'y';
 		const lockY = axis === 'x';
@@ -97,12 +88,7 @@ export const draggable = (options: DraggableOptions = {}): Attachment<MotionElem
 		let pointerId = -1;
 		let startX = 0;
 		let startY = 0;
-		// Velocity tracking from the last two pointer samples.
-		let lastX = 0;
-		let lastY = 0;
-		let lastT = 0;
-		let velX = 0;
-		let velY = 0;
+		const velocity = trackVelocity();
 
 		const bounds = (): DragConstraints =>
 			typeof constraints === 'function' ? constraints() : (constraints ?? {});
@@ -110,8 +96,8 @@ export const draggable = (options: DraggableOptions = {}): Attachment<MotionElem
 		const info = (x: number, y: number): DragInfo => ({
 			x,
 			y,
-			velocityX: velX,
-			velocityY: velY
+			velocityX: velocity.x,
+			velocityY: velocity.y
 		});
 
 		const onPointerDown = (event: PointerEvent): void => {
@@ -124,24 +110,13 @@ export const draggable = (options: DraggableOptions = {}): Attachment<MotionElem
 			springY.stop();
 			startX = event.clientX - springX.current;
 			startY = event.clientY - springY.current;
-			lastX = event.clientX;
-			lastY = event.clientY;
-			lastT = event.timeStamp;
-			velX = 0;
-			velY = 0;
+			velocity.reset(event);
 			onStart?.(info(springX.current, springY.current), element);
 		};
 
 		const onPointerMove = (event: PointerEvent): void => {
 			if (!dragging || event.pointerId !== pointerId) return;
-			const dt = (event.timeStamp - lastT) / 1000;
-			if (dt > 0) {
-				velX = (event.clientX - lastX) / dt;
-				velY = (event.clientY - lastY) / dt;
-			}
-			lastX = event.clientX;
-			lastY = event.clientY;
-			lastT = event.timeStamp;
+			velocity.sample(event);
 
 			const c = bounds();
 			if (!lockX) {
@@ -158,8 +133,8 @@ export const draggable = (options: DraggableOptions = {}): Attachment<MotionElem
 			const targetX = snapToOrigin ? 0 : applyConstraint(springX.current, xBounds(c));
 			const targetY = snapToOrigin ? 0 : applyConstraint(springY.current, yBounds(c));
 			if (momentum) {
-				if (!lockX) springX.setVelocity(velX);
-				if (!lockY) springY.setVelocity(velY);
+				if (!lockX) springX.setVelocity(velocity.x);
+				if (!lockY) springY.setVelocity(velocity.y);
 			}
 			if (!lockX) springX.set(targetX);
 			if (!lockY) springY.set(targetY);
@@ -173,24 +148,20 @@ export const draggable = (options: DraggableOptions = {}): Attachment<MotionElem
 			settle();
 		};
 
-		const down = onPointerDown as EventListener;
-		const move = onPointerMove as EventListener;
-		const up = onPointerUp as EventListener;
-		element.addEventListener('pointerdown', down);
-		element.addEventListener('pointermove', move);
-		element.addEventListener('pointerup', up);
-		element.addEventListener('pointercancel', up);
+		const unlisten = listen(element, {
+			pointerdown: onPointerDown,
+			pointermove: onPointerMove,
+			pointerup: onPointerUp,
+			pointercancel: onPointerUp
+		});
 
 		return () => {
-			element.removeEventListener('pointerdown', down);
-			element.removeEventListener('pointermove', move);
-			element.removeEventListener('pointerup', up);
-			element.removeEventListener('pointercancel', up);
+			unlisten();
 			unsubX();
 			unsubY();
 			springX.stop();
 			springY.stop();
-			element.style.touchAction = prevTouchAction;
+			unlockTouchAction();
 		};
 	};
 };

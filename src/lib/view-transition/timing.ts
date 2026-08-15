@@ -4,8 +4,8 @@
  * browser integration in `controller.ts`.
  */
 
-import { springEasing } from '$lib/easing';
-import { easingToCss } from '$lib/animate/keyframes/easing-utils';
+import { springEasing } from '../easing';
+import { easingToCss } from '../animate/keyframes/easing-utils';
 import type { ViewTransitionOptions } from './types';
 
 /**

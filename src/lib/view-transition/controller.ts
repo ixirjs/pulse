@@ -11,7 +11,8 @@
  * controllable.
  */
 
-import type { AnimationController } from '$lib/animate/types';
+import type { AnimationController } from '../animate/types';
+import { playbackControls } from '../shared/playback';
 import { resolveViewTransitionTiming } from './timing';
 import type { ViewTransitionOptions } from './types';
 
@@ -100,17 +101,7 @@ export const createViewTransitionController = (
 		// state to commit — `stop()` finishes the morph immediately, like `cancel`
 		// minus the hard reset.
 		stop: skip,
-		pause: () => forEachAnim((a) => a.pause()),
-		play: () => forEachAnim((a) => a.play()),
-		reverse: () => forEachAnim((a) => a.reverse()),
-		seek: (timeMs: number) =>
-			forEachAnim((a) => {
-				try {
-					a.currentTime = timeMs;
-				} catch {
-					/* animation may have been cancelled — ignore */
-				}
-			})
+		...playbackControls(forEachAnim)
 	};
 };
 

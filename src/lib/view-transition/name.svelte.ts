@@ -5,8 +5,8 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/shared/types';
+import { isBrowser } from '../shared/browser';
+import type { MotionElement } from '../shared/types';
 
 /** A static name, or a thunk read reactively so the name can track `$state`. */
 export type ViewTransitionNameInput = string | (() => string | undefined);

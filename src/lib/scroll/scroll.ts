@@ -24,8 +24,10 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { AnimationController, MotionElement } from '$lib/animate';
+import { isBrowser } from '../shared/browser';
+import { createFrameBatch } from '../shared/frame-batch';
+import { listen } from '../shared/listen';
+import type { AnimationController, MotionElement } from '../animate';
 import { coverProgress, containProgress, pageProgress } from './progress';
 
 export type ScrollAxis = 'x' | 'y';
@@ -134,25 +136,23 @@ export const scroll = (options: ScrollOptions = {}): Attachment<MotionElement> =
 		const duration = controller ? totalDuration(controller) : 0;
 		const scrollSource: EventTarget = container ?? window;
 
-		let frame: number | null = null;
 		const update = (): void => {
-			frame = null;
 			const progress = progressFor(range, readState(element, container, axis));
 			controller?.seek(progress * duration);
 			onProgress?.(progress, element);
 		};
-		const schedule = (): void => {
-			if (frame == null) frame = requestAnimationFrame(update);
-		};
+		// Scroll attachments remain independently owned, but their geometry work
+		// shares one rAF when several receive the same scroll/resize burst.
+		const batch = createFrameBatch(update);
 
 		update();
-		scrollSource.addEventListener('scroll', schedule, { passive: true });
-		window.addEventListener('resize', schedule, { passive: true });
+		const unlistenScroll = listen(scrollSource, { scroll: batch.schedule }, { passive: true });
+		const unlistenResize = listen(window, { resize: batch.schedule }, { passive: true });
 
 		return () => {
-			if (frame != null) cancelAnimationFrame(frame);
-			scrollSource.removeEventListener('scroll', schedule);
-			window.removeEventListener('resize', schedule);
+			batch.cancel();
+			unlistenScroll();
+			unlistenResize();
 			controller?.cancel();
 		};
 	};

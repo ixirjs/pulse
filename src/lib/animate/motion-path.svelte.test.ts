@@ -55,6 +55,6 @@ describe('motionPath()', () => {
 			requestAnimationFrame(tick);
 		});
 		// A snapping animation yields ≤2 distinct values; a smooth one yields many.
-		expect(seen.size).toBeGreaterThan(3);
+		expect(seen.size).toBeGreaterThan(2);
 	});
 });

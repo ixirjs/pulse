@@ -11,7 +11,9 @@
  */
 export * from './flip';
 export * from './animate';
-export * from './scroll';
+export * from './easing';
+// Explicit index avoids relying on directory-import resolution in consuming Vite projects.
+export * from './scroll/index';
 export * from './gestures';
 export * from './presence';
 export * from './variants';

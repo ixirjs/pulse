@@ -4,6 +4,8 @@
  * driver layer, which feeds already-resolved `rgb/rgba/#hex` colours here.
  */
 
+import { lerp } from '../shared/math';
+
 export type RGBA = readonly [r: number, g: number, b: number, a: number];
 
 export interface GradientStop {
@@ -17,9 +19,6 @@ export interface LinearGradient {
 	angle: number;
 	stops: GradientStop[];
 }
-
-/** Linear interpolation. */
-export const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
 /** Interpolate two RGBA colours channel-wise (alpha included). */
 export const lerpRGBA = (a: RGBA, b: RGBA, t: number): RGBA => [
@@ -59,11 +58,11 @@ export const parseRGBA = (input: string): RGBA => {
 };
 
 /** Format an RGBA tuple as a CSS `rgba(...)` string. */
-export const formatRGBA = ([r, g, b, a]: RGBA): string =>
+const formatRGBA = ([r, g, b, a]: RGBA): string =>
 	`rgba(${r}, ${g}, ${b}, ${Number(a.toFixed(3))})`;
 
 /** Split a comma-separated list, ignoring commas nested in parentheses. */
-export const splitTopLevel = (input: string): string[] => {
+const splitTopLevel = (input: string): string[] => {
 	const out: string[] = [];
 	let depth = 0;
 	let start = 0;
@@ -132,6 +131,38 @@ export const formatLinearGradient = (angle: number, stops: { rgba: RGBA; pos: nu
 	`linear-gradient(${Number(angle.toFixed(2))}deg, ${stops
 		.map((s) => `${formatRGBA(s.rgba)} ${Number(s.pos.toFixed(2))}%`)
 		.join(', ')})`;
+
+/**
+ * Format an interpolated gradient directly from two resolved stop lists.
+ *
+ * The rAF driver calls this every frame. Keeping interpolation and formatting
+ * together avoids allocating a tuple and object for each stop before creating
+ * the unavoidable CSS string, while preserving `formatLinearGradient()`'s
+ * rounding and output format.
+ */
+export const formatInterpolatedLinearGradient = (
+	fromAngle: number,
+	toAngle: number,
+	fromColors: readonly RGBA[],
+	toColors: readonly RGBA[],
+	fromPositions: readonly number[],
+	toPositions: readonly number[],
+	t: number
+): string => {
+	let stops = '';
+	for (let i = 0; i < fromColors.length; i++) {
+		const from = fromColors[i]!;
+		const to = toColors[i]!;
+		const r = Math.round(lerp(from[0], to[0], t));
+		const g = Math.round(lerp(from[1], to[1], t));
+		const b = Math.round(lerp(from[2], to[2], t));
+		const a = Number(lerp(from[3], to[3], t).toFixed(3));
+		const pos = Number(lerp(fromPositions[i]!, toPositions[i]!, t).toFixed(2));
+		if (i > 0) stops += ', ';
+		stops += `rgba(${r}, ${g}, ${b}, ${a}) ${pos}%`;
+	}
+	return `linear-gradient(${Number(lerp(fromAngle, toAngle, t).toFixed(2))}deg, ${stops})`;
+};
 
 /** Distribute `null` stop positions evenly across `[0, 100]`. */
 export const resolvePositions = (stops: GradientStop[]): number[] =>

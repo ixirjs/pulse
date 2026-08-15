@@ -7,13 +7,13 @@ import { describe, expect, it } from 'vitest';
 import { easeOut } from '$lib/easing';
 import {
 	DEFAULT_DELAY,
-	DEFAULT_DURATION,
-	DEFAULT_EASING,
 	readOptions,
 	resolveDuration,
 	resolveEasing,
 	resolveOpacity
 } from './options';
+import { FLIP_DEFAULT_DURATION } from './geometry';
+import { DEFAULT_EASING } from '../animate/keyframes/easing-utils';
 import type { FlipRectPair } from './types';
 
 const pairAt = (dx = 0, dy = 0): FlipRectPair => ({
@@ -22,8 +22,8 @@ const pairAt = (dx = 0, dy = 0): FlipRectPair => ({
 });
 
 describe('constants', () => {
-	it('DEFAULT_DURATION is a positive number', () => {
-		expect(DEFAULT_DURATION).toBeGreaterThan(0);
+	it('FLIP_DEFAULT_DURATION is a positive number', () => {
+		expect(FLIP_DEFAULT_DURATION).toBeGreaterThan(0);
 	});
 
 	it('DEFAULT_DELAY is 0', () => {
@@ -63,8 +63,8 @@ describe('readOptions()', () => {
 describe('resolveDuration()', () => {
 	const rects = pairAt();
 
-	it('returns DEFAULT_DURATION when undefined', () => {
-		expect(resolveDuration(undefined, rects)).toBe(DEFAULT_DURATION);
+	it('returns FLIP_DEFAULT_DURATION when undefined', () => {
+		expect(resolveDuration(undefined, rects)).toBe(FLIP_DEFAULT_DURATION);
 	});
 
 	it('returns the literal value for a number', () => {

@@ -11,13 +11,12 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
-import { capture, release } from './pointer-capture';
-import {
-	ensurePropertiesRegistered,
-	ensureTransformWired
-} from '$lib/animate/properties/transform-setup';
+import { isBrowser } from '../shared/browser';
+import { listen } from '../shared/listen';
+import { applyConstraint, type AxisBounds } from './constraints';
+import type { MotionElement } from '../animate';
+import { capture, lockTouchAction, release } from './pointer-capture';
+import { wireTransform } from '../animate/properties/transform-setup';
 
 export interface PinchInfo {
 	/** Distance ratio of the two pointers relative to gesture start. */
@@ -32,11 +31,9 @@ export interface PinchableOptions {
 	/** Track rotation alongside scale. Default `true`. */
 	rotate?: boolean;
 	/** Clamp the reported (and applied) scale. */
-	scaleBounds?: { min?: number; max?: number };
+	scaleBounds?: AxisBounds;
 	/** Write `--motion-scale` / `--motion-rotate` on move. Default `true`. */
 	applyTransform?: boolean;
-	/** Disable pinching without removing the attachment. */
-	disabled?: boolean;
 	onStart?: (info: PinchInfo, element: MotionElement) => void;
 	onMove?: (info: PinchInfo, element: MotionElement) => void;
 	onEnd?: (info: PinchInfo, element: MotionElement) => void;
@@ -50,35 +47,17 @@ const distance = (ax: number, ay: number, bx: number, by: number): number =>
 const angle = (ax: number, ay: number, bx: number, by: number): number =>
 	(Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
 
-const clampScale = (scale: number, bounds?: { min?: number; max?: number }): number => {
-	if (!bounds) return scale;
-	let next = scale;
-	if (bounds.min !== undefined) next = Math.max(bounds.min, next);
-	if (bounds.max !== undefined) next = Math.min(bounds.max, next);
-	return next;
-};
-
 /** Create a pinchable attachment. */
 export const pinchable = (options: PinchableOptions = {}): Attachment<MotionElement> => {
-	const {
-		rotate = true,
-		scaleBounds,
-		applyTransform = true,
-		disabled = false,
-		onStart,
-		onMove,
-		onEnd
-	} = options;
+	const { rotate = true, scaleBounds, applyTransform = true, onStart, onMove, onEnd } = options;
 
 	return (element) => {
-		if (!isBrowser() || disabled) return;
+		if (!isBrowser()) return;
 
 		if (applyTransform) {
-			ensurePropertiesRegistered();
-			ensureTransformWired(element);
+			wireTransform(element);
 		}
-		const prevTouchAction = element.style.touchAction;
-		element.style.touchAction = 'none';
+		const unlockTouchAction = lockTouchAction(element, 'both');
 
 		// Live pointer positions keyed by pointerId; at most two are tracked.
 		const points = new Map<number, { x: number; y: number }>();
@@ -93,6 +72,16 @@ export const pinchable = (options: PinchableOptions = {}): Attachment<MotionElem
 				rotation,
 				center: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
 			};
+		};
+
+		/** Current gesture state, measured from the two live pointers. */
+		const read = (): PinchInfo => {
+			const [a, b] = [...points.values()];
+			const scale = applyConstraint(
+				startDistance > 0 ? distance(a.x, a.y, b.x, b.y) / startDistance : 1,
+				scaleBounds ?? {}
+			);
+			return info(scale, rotate ? angle(a.x, a.y, b.x, b.y) - startAngle : 0);
 		};
 
 		const onPointerDown = (event: PointerEvent): void => {
@@ -116,55 +105,35 @@ export const pinchable = (options: PinchableOptions = {}): Attachment<MotionElem
 			point.y = event.clientY;
 			if (!pinching) return;
 
-			const [a, b] = [...points.values()];
-			const currentDistance = distance(a.x, a.y, b.x, b.y);
-			const scale = clampScale(
-				startDistance > 0 ? currentDistance / startDistance : 1,
-				scaleBounds
-			);
-			const rotation = rotate ? angle(a.x, a.y, b.x, b.y) - startAngle : 0;
-
+			const current = read();
 			if (applyTransform) {
 				// Baseline scale of 1; multiplying keeps composition explicit.
-				element.style.setProperty('--motion-scale', `${1 * scale}`);
-				if (rotate) element.style.setProperty('--motion-rotate', `${rotation}deg`);
+				element.style.setProperty('--motion-scale', `${1 * current.scale}`);
+				if (rotate) element.style.setProperty('--motion-rotate', `${current.rotation}deg`);
 			}
-			onMove?.(info(scale, rotation), element);
+			onMove?.(current, element);
 		};
 
 		const onPointerUp = (event: PointerEvent): void => {
 			if (!points.has(event.pointerId)) return;
 			release(element, event.pointerId);
-			if (pinching) {
-				const [a, b] = [...points.values()];
-				const currentDistance = distance(a.x, a.y, b.x, b.y);
-				const scale = clampScale(
-					startDistance > 0 ? currentDistance / startDistance : 1,
-					scaleBounds
-				);
-				const rotation = rotate ? angle(a.x, a.y, b.x, b.y) - startAngle : 0;
-				onEnd?.(info(scale, rotation), element);
-			}
+			if (pinching) onEnd?.(read(), element);
 			// Lifting either pointer ends the gesture and resets.
 			pinching = false;
 			points.delete(event.pointerId);
 		};
 
-		const down = onPointerDown as EventListener;
-		const move = onPointerMove as EventListener;
-		const up = onPointerUp as EventListener;
-		element.addEventListener('pointerdown', down);
-		element.addEventListener('pointermove', move);
-		element.addEventListener('pointerup', up);
-		element.addEventListener('pointercancel', up);
+		const unlisten = listen(element, {
+			pointerdown: onPointerDown,
+			pointermove: onPointerMove,
+			pointerup: onPointerUp,
+			pointercancel: onPointerUp
+		});
 
 		return () => {
-			element.removeEventListener('pointerdown', down);
-			element.removeEventListener('pointermove', move);
-			element.removeEventListener('pointerup', up);
-			element.removeEventListener('pointercancel', up);
+			unlisten();
 			points.clear();
-			element.style.touchAction = prevTouchAction;
+			unlockTouchAction();
 		};
 	};
 };

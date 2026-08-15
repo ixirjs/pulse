@@ -37,8 +37,8 @@ animate(el, { opacity: [0, 1], y: [20, 0] });
 
 // Full PropConfig
 animate(el, {
-  x: { from: -100, to: 0, duration: 400, easing: easeOut },
-  scale: { to: 1.05, spring: { stiffness: 300, damping: 20 } },
+	x: { from: -100, to: 0, duration: 400, easing: easeOut },
+	scale: { to: 1.05, spring: { stiffness: 300, damping: 20 } }
 });
 
 // Shared defaults
@@ -47,18 +47,18 @@ animate(el, { x: 100, opacity: 1 }, { duration: 300, easing: cubicOut });
 
 ### `animate()` defaults
 
-| Option | Type | Default |
-|---|---|---|
-| `duration` | `number` | `300` |
-| `easing` | `EasingFn` | cubic ease-out |
-| `spring` | `SpringInput` | — |
-| `delay` | `number` | `0` |
-| `fill` | `FillMode` | `'both'` |
-| `iterations` | `number` | `1` |
-| `direction` | `PlaybackDirection` | `'normal'` |
-| `respectReducedMotion` | `boolean` | `true` |
-| `onStart` | `(el) => void` | — |
-| `onEnd` | `(el, { finished }) => void` | — |
+| Option                 | Type                         | Default        |
+| ---------------------- | ---------------------------- | -------------- |
+| `duration`             | `number`                     | `300`          |
+| `easing`               | `EasingFn`                   | cubic ease-out |
+| `spring`               | `SpringInput`                | —              |
+| `delay`                | `number`                     | `0`            |
+| `fill`                 | `FillMode`                   | `'both'`       |
+| `iterations`           | `number`                     | `1`            |
+| `direction`            | `PlaybackDirection`          | `'normal'`     |
+| `respectReducedMotion` | `boolean`                    | `true`         |
+| `onStart`              | `(el) => void`               | —              |
+| `onEnd`                | `(el, { finished }) => void` | —              |
 
 ### `AnimationController`
 
@@ -68,76 +68,91 @@ const ctrl = animate(el, { x: 100 });
 ctrl.play();
 ctrl.pause();
 ctrl.reverse();
-ctrl.cancel();    // cancel + snap back
-ctrl.stop();      // commit current position + cancel
-ctrl.seek(150);   // seek to 150ms
+ctrl.cancel(); // cancel + snap back
+ctrl.stop(); // commit current position + cancel
+ctrl.seek(150); // seek to 150ms
 ctrl.playbackRate = 2; // 2× speed
 
-await ctrl.finished; // resolves when done
+await ctrl.finished; // resolves on normal completion
 ```
 
 ### Transform shorthands
 
 The following shorthands animate independent transform components without clobbering each other:
 
-| Key | CSS custom property |
-|---|---|
-| `x` | `--motion-x` (px) |
-| `y` | `--motion-y` (px) |
-| `scale` | `--motion-scale` |
-| `scaleX` | `--motion-scale-x` |
-| `scaleY` | `--motion-scale-y` |
+| Key      | CSS custom property     |
+| -------- | ----------------------- |
+| `x`      | `--motion-x` (px)       |
+| `y`      | `--motion-y` (px)       |
+| `scale`  | `--motion-scale`        |
+| `scaleX` | `--motion-scale-x`      |
+| `scaleY` | `--motion-scale-y`      |
 | `rotate` | `--motion-rotate` (deg) |
-| `skewX` | `--motion-skew-x` (deg) |
-| `skewY` | `--motion-skew-y` (deg) |
+| `skewX`  | `--motion-skew-x` (deg) |
+| `skewY`  | `--motion-skew-y` (deg) |
 
 ## `flip(options?)` — Svelte 5 attachment
 
 Zero-config FLIP layout animation. Attach to any element that may shift position or size.
+Layout tracking is built in — resizes and `{#each}` reorders animate with no options at all.
 
 ```svelte
 <script>
-  import { flip } from '@ixirjs/pulse';
-  let open = $state(false);
+	import { flip } from '@ixirjs/pulse';
+	let open = $state(false);
 </script>
 
-<!-- Auto-animates whenever the element moves -->
+<!-- Auto-animates whenever the element moves or resizes -->
 <div {@attach flip()}>...</div>
 
 <!-- Custom duration + easing -->
 <div {@attach flip({ duration: 320, easing: cubicOut })}>...</div>
 
-<!-- Reactive: re-measures whenever `open` changes -->
-<div {@attach flip({ auto: () => { void open; } })}>...</div>
+<!-- Let flip own the attribute: it applies the class, then measures and
+     animates the resulting layout change in the same tick -->
+<div {@attach flip({ class: () => ({ 'is-open': open }) })}>...</div>
+
+<!-- Same, with inline style -->
+<div {@attach flip({ style: () => (open ? 'height: 320px' : 'height: 64px') })}>...</div>
 
 <!-- Skip the first render (mount) -->
 <div {@attach flip({ skip: (n) => n === 0 })}>...</div>
 ```
 
+`class` and `style` are thunks so their rune dependencies are tracked. Because `flip` writes the
+attribute itself, it measures the element before and after the write and animates the difference
+in the same tick — no extra frame, and nothing to keep in sync by hand.
+
+> Use `flip`'s `class` option **or** a dynamic `class={…}` on the same element, not both: Svelte
+> assigns `className` wholesale and would drop flip's tokens. A static `class="…"` is safe, and
+> `style` never conflicts (it merges per declaration). Neither is applied during SSR — put
+> server-rendered state in markup as well.
+
 ### Flip options
 
-| Option | Type | Default |
-|---|---|---|
-| `duration` | `number \| (distance, rects) => number` | `280` |
-| `easing` | `EasingFn \| string` | `cubicOut` |
-| `delay` | `number` | `0` |
-| `translate` | `boolean` | `true` |
-| `scale` | `boolean` | `true` |
-| `opacity` | `boolean \| { from?, to? }` | — |
-| `auto` | `false \| (() => void) \| ObserverManager` | — |
-| `skip` | `boolean \| (render, rects) => boolean` | — |
-| `disablePointerEvents` | `boolean` | — |
-| `respectReducedMotion` | `boolean` | `true` |
-| `layoutId` | `string` | — |
-| `onStart` | `(el, rects) => void` | — |
-| `onEnd` | `(el, { finished, rects }) => void` | — |
+| Option                 | Type                                    | Default    |
+| ---------------------- | --------------------------------------- | ---------- |
+| `duration`             | `number \| (distance, rects) => number` | `280`      |
+| `easing`               | `EasingFn \| string`                    | `cubicOut` |
+| `delay`                | `number`                                | `0`        |
+| `translate`            | `boolean`                               | `true`     |
+| `scale`                | `boolean`                               | `true`     |
+| `opacity`              | `boolean \| { from?, to? }`             | —          |
+| `class`                | `() => ClassValue`                      | —          |
+| `style`                | `() => string`                          | —          |
+| `skip`                 | `boolean \| (render, rects) => boolean` | —          |
+| `disablePointerEvents` | `boolean`                               | —          |
+| `respectReducedMotion` | `boolean`                               | `true`     |
+| `layoutId`             | `string`                                | —          |
+| `onStart`              | `(el, rects) => void`                   | —          |
+| `onEnd`                | `(el, { finished, rects }) => void`     | —          |
 
 ### Shared-element transitions (`createFlipScope`)
 
 ```svelte
 <script>
-  import { createFlipScope } from '@ixirjs/pulse';
-  const scope = createFlipScope();
+	import { createFlipScope } from '@ixirjs/pulse';
+	const scope = createFlipScope();
 </script>
 
 <!-- Component A (unmounting) -->
@@ -165,24 +180,24 @@ Sequence and parallelize `animate()` calls on a shared clock.
 import { timeline } from '@ixirjs/pulse';
 
 timeline({ duration: 400 })
-  .add(card,    { y: [20, 0], opacity: [0, 1] })
-  .add(title,   { y: [10, 0], opacity: [0, 1] }, undefined, '<+50')
-  .label('reveal')
-  .add(actions, { opacity: [0, 1] }, undefined, 'reveal+=100')
-  .call(() => console.log('done'), '>+50')
-  .play();
+	.add(card, { y: [20, 0], opacity: [0, 1] })
+	.add(title, { y: [10, 0], opacity: [0, 1] }, undefined, '<+50')
+	.label('reveal')
+	.add(actions, { opacity: [0, 1] }, undefined, 'reveal+=100')
+	.call(() => console.log('done'), '>+50')
+	.play();
 ```
 
 ### Position grammar
 
-| Syntax | Meaning |
-|---|---|
-| `undefined` | Append at current end |
-| `123` | Absolute time in ms |
-| `"+=200"`, `"-=100"` | Offset from current end |
-| `">"`, `">+200"` | End of last child ± offset |
-| `"<"`, `"<+200"` | Start of last child ± offset |
-| `"label"`, `"label+=200"` | Named label ± offset |
+| Syntax                    | Meaning                      |
+| ------------------------- | ---------------------------- |
+| `undefined`               | Append at current end        |
+| `123`                     | Absolute time in ms          |
+| `"+=200"`, `"-=100"`      | Offset from current end      |
+| `">"`, `">+200"`          | End of last child ± offset   |
+| `"<"`, `"<+200"`          | Start of last child ± offset |
+| `"label"`, `"label+=200"` | Named label ± offset         |
 
 ## `stagger(interval, options?)`
 
@@ -191,7 +206,7 @@ import { animate, stagger } from '@ixirjs/pulse';
 
 const delay = stagger(50);
 items.forEach((el, i) => {
-  animate(el, { opacity: [0, 1], y: [20, 0] }, { delay: delay(i, items.length) });
+	animate(el, { opacity: [0, 1], y: [20, 0] }, { delay: delay(i, items.length) });
 });
 
 // Center-out wave
@@ -211,12 +226,12 @@ import { spring } from '@ixirjs/pulse';
 const { samples, duration } = spring({ stiffness: 200, damping: 20 });
 ```
 
-| Option | Default |
-|---|---|
-| `stiffness` | `170` |
-| `damping` | `26` |
-| `mass` | `1` |
-| `velocity` | `0` |
+| Option      | Default |
+| ----------- | ------- |
+| `stiffness` | `170`   |
+| `damping`   | `26`    |
+| `mass`      | `1`     |
+| `velocity`  | `0`     |
 | `restDelta` | `0.001` |
 | `restSpeed` | `0.001` |
 
@@ -255,6 +270,16 @@ import { animate, timeline, spring } from '@ixirjs/pulse/animate';
 import { flip, createFlipScope, flipFrom } from '@ixirjs/pulse/flip';
 ```
 
+## Public API and controller lifecycle
+
+The root import and every documented subpath in `package.json` are supported public API. High-level helpers (`animate`, `flip`, and gesture attachments) are the preferred entry points; the low-level exports remain supported for advanced integrations and are not removed without a documented migration.
+
+`AnimationController.finished` preserves the terminal semantics of its underlying platform. Controllers returned by `animate()` and APIs built on WAAPI reject when `cancel()` aborts them; native view-transition and no-animation fallback controllers resolve once their update settles. Handle cancellation when terminal notification is all you need:
+
+```ts
+await controller.finished.catch(() => undefined);
+```
+
 ## Contributing
 
 ```sh
@@ -270,4 +295,3 @@ npm run lint     # lint + format check
 ## License
 
 [MIT](./LICENSE)
-

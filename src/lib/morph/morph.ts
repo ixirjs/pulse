@@ -15,9 +15,10 @@
  * ```
  */
 
-import { isBrowser, shouldReduceMotion } from '$lib/shared/browser';
-import { easeOut } from '$lib/easing';
-import type { EasingFn } from '$lib/shared/types';
+import { isBrowser, shouldReduceMotion } from '../shared/browser';
+import { frameTween } from '../shared/frame-tween';
+import { easeOut } from '../easing';
+import type { EasingFn } from '../shared/types';
 import { interpolatePlan, planMorph } from './interpolate';
 
 export interface MorphOptions {
@@ -61,56 +62,28 @@ export const morph = (
 		onComplete
 	} = options;
 
-	let resolveFinished!: () => void;
-	const finished = new Promise<void>((res) => (resolveFinished = res));
 	const setD = (d: string): void => element.setAttribute('d', d);
 
 	if (!isBrowser() || shouldReduceMotion(respectReducedMotion)) {
 		setD(to);
 		onComplete?.();
-		resolveFinished();
-		return { finished, cancel: () => {} };
+		return { finished: Promise.resolve(), cancel: () => {} };
 	}
 
 	const plan = planMorph(from, to, optimize);
 	if (!plan.compatible) {
 		setD(to);
 		onComplete?.();
-		resolveFinished();
-		return { finished, cancel: () => {} };
+		return { finished: Promise.resolve(), cancel: () => {} };
 	}
 
-	let frame: number | null = null;
-	let startTime = 0;
-	let done = false;
+	const tween = frameTween({
+		duration,
+		delay,
+		renderInitial: true,
+		onFrame: (progress) => setD(interpolatePlan(plan, easing(progress))),
+		onComplete
+	});
 
-	const finish = (): void => {
-		if (done) return;
-		done = true;
-		if (frame != null) cancelAnimationFrame(frame);
-		frame = null;
-		resolveFinished();
-	};
-
-	const tick = (now: number): void => {
-		if (!startTime) startTime = now + delay;
-		const elapsed = now - startTime;
-		if (elapsed < 0) {
-			frame = requestAnimationFrame(tick);
-			return;
-		}
-		const t = duration <= 0 ? 1 : Math.min(elapsed / duration, 1);
-		setD(interpolatePlan(plan, easing(t)));
-		if (t >= 1) {
-			onComplete?.();
-			finish();
-		} else {
-			frame = requestAnimationFrame(tick);
-		}
-	};
-
-	setD(interpolatePlan(plan, 0));
-	frame = requestAnimationFrame(tick);
-
-	return { finished, cancel: finish };
+	return { finished: tween.finished, cancel: tween.cancel };
 };

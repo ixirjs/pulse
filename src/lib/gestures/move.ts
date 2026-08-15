@@ -18,14 +18,12 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '$lib/shared/browser';
-import type { MotionElement } from '$lib/animate';
-import type { SpringOptions } from '$lib/shared/types';
-import { createSpringValue } from '$lib/animate/spring-value';
-import {
-	ensurePropertiesRegistered,
-	ensureTransformWired
-} from '$lib/animate/properties/transform-setup';
+import { isBrowser } from '../shared/browser';
+import { listen } from '../shared/listen';
+import type { MotionElement } from '../animate';
+import type { SpringOptions } from '../shared/types';
+import { createSpringValue } from '../animate/spring-value';
+import { wireTransform } from '../animate/properties/transform-setup';
 
 export interface MoveInfo {
 	/** Pointer position in client coordinates. */
@@ -52,8 +50,6 @@ export interface MoveableOptions {
 	spring?: SpringOptions;
 	/** Also react to touch pointers. Default `false` (mouse/pen only). */
 	includeTouch?: boolean;
-	/** Disable without removing the attachment. */
-	disabled?: boolean;
 	onMoveStart?: (info: MoveInfo, element: MotionElement) => void;
 	onMove?: (info: MoveInfo, element: MotionElement) => void;
 	onMoveEnd?: (element: MotionElement) => void;
@@ -66,14 +62,13 @@ export const moveable = (options: MoveableOptions = {}): Attachment<MotionElemen
 		strength = 0.3,
 		spring,
 		includeTouch = false,
-		disabled = false,
 		onMoveStart,
 		onMove,
 		onMoveEnd
 	} = options;
 
 	return (element) => {
-		if (!isBrowser() || disabled) return;
+		if (!isBrowser()) return;
 
 		// Only spring the axes we actually write, mirroring draggable.
 		const springX = applyTransform ? createSpringValue({ ...spring, initial: 0 }) : null;
@@ -81,8 +76,7 @@ export const moveable = (options: MoveableOptions = {}): Attachment<MotionElemen
 		let unsubX = (): void => {};
 		let unsubY = (): void => {};
 		if (applyTransform) {
-			ensurePropertiesRegistered();
-			ensureTransformWired(element);
+			wireTransform(element);
 			unsubX = springX!.subscribe((v) => element.style.setProperty('--motion-x', `${v}px`));
 			unsubY = springY!.subscribe((v) => element.style.setProperty('--motion-y', `${v}px`));
 		}
@@ -128,17 +122,14 @@ export const moveable = (options: MoveableOptions = {}): Attachment<MotionElemen
 			onMoveEnd?.(element);
 		};
 
-		const enter = onEnter as EventListener;
-		const move = onPointerMove as EventListener;
-		const leave = onLeave as EventListener;
-		element.addEventListener('pointerenter', enter);
-		element.addEventListener('pointermove', move);
-		element.addEventListener('pointerleave', leave);
+		const unlisten = listen(element, {
+			pointerenter: onEnter,
+			pointermove: onPointerMove,
+			pointerleave: onLeave
+		});
 
 		return () => {
-			element.removeEventListener('pointerenter', enter);
-			element.removeEventListener('pointermove', move);
-			element.removeEventListener('pointerleave', leave);
+			unlisten();
 			unsubX();
 			unsubY();
 			springX?.stop();

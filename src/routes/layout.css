@@ -1,5 +1,17 @@
 @import 'tailwindcss';
 
+/* Class-based dark mode, toggled on <html> and persisted in localStorage. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Dotted paper background, tuned per theme. */
+.dots {
+	background-image: radial-gradient(circle, rgb(0 0 0 / 0.14) 1px, transparent 1px);
+	background-size: 22px 22px;
+}
+.dark .dots {
+	background-image: radial-gradient(circle, rgb(255 255 255 / 0.09) 1px, transparent 1px);
+}
+
 /* This page uses local shared-element transitions. Capturing `root` would make
  * the entire live document ineligible for hit-testing during every morph. */
 html {

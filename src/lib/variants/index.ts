@@ -5,7 +5,10 @@
  * - `variants()` — reactive Svelte attachment driven by a state thunk.
  */
 
-export { createVariants } from './variants';
-export type { VariantMap, VariantsOptions, VariantsController } from './variants';
-export { variants } from './variants.svelte';
-export type { VariantsAttachmentOptions } from './variants.svelte';
+export { createVariants, variants } from './variants.svelte';
+export type {
+	VariantMap,
+	VariantsOptions,
+	VariantsController,
+	VariantsAttachmentOptions
+} from './variants.svelte';

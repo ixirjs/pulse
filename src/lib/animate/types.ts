@@ -2,7 +2,7 @@
  * Public types for the `animate()` library.
  */
 
-import type { EasingFn, MotionElement, SpringOptions } from '$lib/shared/types';
+import type { EasingFn, MotionElement, SpringOptions } from '../shared/types';
 
 export type { EasingFn, MotionElement, SpringOptions };
 
@@ -110,10 +110,19 @@ export interface AnimateDefaults {
 
 export type AnimateProps = Record<string, PropInput>;
 
+/**
+ * Playback controls shared by WAAPI, FLIP, timelines, and native view transitions.
+ *
+ * `finished` deliberately preserves its engine's terminal semantics: controllers
+ * created by `animate()` reject when cancelled (matching WAAPI), while native
+ * view-transition and no-animation fallback controllers resolve after settling.
+ * Callers that only need terminal notification may await it with their own
+ * rejection handling; cancellation is not normalized by this interface.
+ */
 export interface AnimationController {
-	/** All underlying WAAPI animations. */
+	/** Underlying browser animations when the engine exposes them. */
 	readonly animations: readonly Animation[];
-	/** Resolves when every underlying animation finishes (or rejects on cancel). */
+	/** Settles when the engine reaches a terminal state; see the interface contract. */
 	readonly finished: Promise<void>;
 	/**
 	 * Current playback position in ms from the animation start, or `null`

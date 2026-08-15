@@ -17,8 +17,9 @@
  */
 
 import type { TransitionConfig } from 'svelte/transition';
-import { easeOut, springEasing } from '$lib/easing';
-import type { EasingFn, SpringOptions } from '$lib/shared/types';
+import { easeOut, springEasing } from '../easing';
+import { restoreStyleProp, saveStyleProp } from '../shared/inline-style';
+import type { EasingFn, SpringOptions } from '../shared/types';
 
 export interface PresenceParams {
 	/** Delay before the transition starts (ms). */
@@ -81,12 +82,10 @@ export interface SizeFields {
 const resolveSize = (node: Element, axis: 'width' | 'height', value: SizeValue): number => {
 	if (typeof value === 'number') return value;
 	const style = (node as HTMLElement).style;
-	const prev = style.getPropertyValue(axis);
-	const priority = style.getPropertyPriority(axis);
+	const saved = saveStyleProp(style, axis);
 	style.setProperty(axis, value);
 	const resolved = px(getComputedStyle(node), axis);
-	if (prev) style.setProperty(axis, prev, priority);
-	else style.removeProperty(axis);
+	restoreStyleProp(style, axis, saved);
 	return resolved;
 };
 
@@ -120,26 +119,52 @@ interface AxisPlan {
 }
 
 /**
- * Plan a width/height collapse for one axis. Scaling only `width`/`height`
- * isn't enough — under `box-sizing: border-box` the box floors at its padding,
- * so a `width: 0` element never fully closes its slot. We therefore collapse
- * the padding, border, and margin on the axis by the same fraction, exactly
- * like the `size` transition, so the footprint reaches zero. Naturals are read
- * before `resolveSize()` (which momentarily overrides the inline size).
+ * Snapshot an axis's natural footprint: the main size plus every spacing
+ * contribution (padding, border, margin) on that axis. Scaling only
+ * `width`/`height` isn't enough — under `box-sizing: border-box` the box floors
+ * at its padding, so a `width: 0` element never fully closes its slot.
+ * Collapsing the spacing by the same fraction takes the footprint to zero.
+ */
+const axisMetrics = (node: Element, axis: 'width' | 'height'): Omit<AxisPlan, 'startFraction'> => {
+	const style = getComputedStyle(node);
+	return {
+		main: axis,
+		natural: px(style, axis),
+		spacing: AXIS_SPACING[axis].map((prop): [string, number] => [prop, px(style, prop)])
+	};
+};
+
+/**
+ * Plan a collapse for one axis from a caller-supplied start size. Naturals are
+ * read before `resolveSize()`, which momentarily overrides the inline size.
  */
 const planAxis = (node: Element, axis: 'width' | 'height', value: SizeValue): AxisPlan => {
-	const style = getComputedStyle(node);
-	const natural = px(style, axis);
-	const spacing = AXIS_SPACING[axis].map((prop): [string, number] => [prop, px(style, prop)]);
+	const metrics = axisMetrics(node, axis);
 	const start = resolveSize(node, axis, value);
-	return { main: axis, natural, spacing, startFraction: natural > 0 ? start / natural : 0 };
+	return {
+		...metrics,
+		startFraction: metrics.natural > 0 ? start / metrics.natural : 0
+	};
+};
+
+/**
+ * Declarations that place every planned axis at eased progress `t` — the single
+ * emitter shared by the `width`/`height` fields and the `size` transition.
+ */
+const growDecls = (plans: readonly AxisPlan[], t: number): string[] => {
+	const decls = ['overflow: hidden'];
+	for (const p of plans) {
+		const f = p.startFraction + t * (1 - p.startFraction);
+		decls.push(`${p.main}: ${f * p.natural}px`);
+		for (const [prop, nat] of p.spacing) decls.push(`${prop}: ${f * nat}px`);
+	}
+	return decls;
 };
 
 /**
  * Build a `(t) => declarations[]` that grows the element from the given start
- * size to its natural footprint on each requested axis — width/height plus the
- * axis's padding, border, and margin — so the box (and its layout slot) fully
- * collapses at the low end. Returns `null` when neither dimension is requested.
+ * size to its natural footprint on each requested axis. Returns `null` when
+ * neither dimension is requested.
  */
 const sizeTween = (
 	node: Element,
@@ -149,15 +174,7 @@ const sizeTween = (
 	const plans: AxisPlan[] = [];
 	if (width != null) plans.push(planAxis(node, 'width', width));
 	if (height != null) plans.push(planAxis(node, 'height', height));
-	return (t) => {
-		const decls = ['overflow: hidden'];
-		for (const p of plans) {
-			const f = p.startFraction + t * (1 - p.startFraction);
-			decls.push(`${p.main}: ${f * p.natural}px`);
-			for (const [prop, nat] of p.spacing) decls.push(`${prop}: ${f * nat}px`);
-		}
-		return decls;
-	};
+	return (t) => growDecls(plans, t);
 };
 
 export type FadeParams = PresenceParams;
@@ -228,55 +245,18 @@ export interface SizeParams extends PresenceParams {
  */
 export const size = (node: Element, params: SizeParams = {}): TransitionConfig => {
 	const { axis = 'y', start = 0, opacity } = params;
-	const style = getComputedStyle(node);
-	const doX = axis === 'x' || axis === 'both';
-	const doY = axis === 'y' || axis === 'both';
 
-	// Snapshot the natural box metrics once; the css() closure scales them by `f`.
-	const m = {
-		width: px(style, 'width'),
-		height: px(style, 'height'),
-		paddingLeft: px(style, 'padding-left'),
-		paddingRight: px(style, 'padding-right'),
-		paddingTop: px(style, 'padding-top'),
-		paddingBottom: px(style, 'padding-bottom'),
-		marginLeft: px(style, 'margin-left'),
-		marginRight: px(style, 'margin-right'),
-		marginTop: px(style, 'margin-top'),
-		marginBottom: px(style, 'margin-bottom'),
-		borderLeft: px(style, 'border-left-width'),
-		borderRight: px(style, 'border-right-width'),
-		borderTop: px(style, 'border-top-width'),
-		borderBottom: px(style, 'border-bottom-width')
-	};
-	const baseOpacity = opacity ?? px(style, 'opacity');
+	// Snapshot the natural box metrics once; growDecls() scales them by `f`.
+	// `start` is already a fraction here, so no resolveSize() round-trip.
+	const plans: AxisPlan[] = [];
+	if (axis === 'x' || axis === 'both')
+		plans.push({ ...axisMetrics(node, 'width'), startFraction: start });
+	if (axis === 'y' || axis === 'both')
+		plans.push({ ...axisMetrics(node, 'height'), startFraction: start });
 
 	return config(params, (t) => {
-		const f = start + t * (1 - start);
-		const decls = ['overflow: hidden'];
-		if (doX) {
-			decls.push(
-				`width: ${f * m.width}px`,
-				`padding-left: ${f * m.paddingLeft}px`,
-				`padding-right: ${f * m.paddingRight}px`,
-				`margin-left: ${f * m.marginLeft}px`,
-				`margin-right: ${f * m.marginRight}px`,
-				`border-left-width: ${f * m.borderLeft}px`,
-				`border-right-width: ${f * m.borderRight}px`
-			);
-		}
-		if (doY) {
-			decls.push(
-				`height: ${f * m.height}px`,
-				`padding-top: ${f * m.paddingTop}px`,
-				`padding-bottom: ${f * m.paddingBottom}px`,
-				`margin-top: ${f * m.marginTop}px`,
-				`margin-bottom: ${f * m.marginBottom}px`,
-				`border-top-width: ${f * m.borderTop}px`,
-				`border-bottom-width: ${f * m.borderBottom}px`
-			);
-		}
-		if (opacity != null) decls.push(`opacity: ${baseOpacity + t * (1 - baseOpacity)}`);
+		const decls = growDecls(plans, t);
+		if (opacity != null) decls.push(`opacity: ${opacity + t * (1 - opacity)}`);
 		return decls.join('; ');
 	});
 };

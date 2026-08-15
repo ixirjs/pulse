@@ -5,8 +5,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import { morph } from './morph';
-import { normalizePath } from './normalize';
-import { toPathString } from './interpolate';
+import { interpolatePlan, planMorph } from './interpolate';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 let svg: SVGSVGElement | null = null;
@@ -31,7 +30,7 @@ describe('morph()', () => {
 		const to = 'M0 0 L0 10';
 		const ctrl = morph(path, 'M0 0 L10 0', to, { duration: 60 });
 		await ctrl.finished;
-		expect(path.getAttribute('d')).toBe(toPathString(normalizePath(to)));
+		expect(path.getAttribute('d')).toBe(interpolatePlan(planMorph('M0 0 L10 0', to), 1));
 	});
 
 	it('writes an interpolated path on the first frame', () => {

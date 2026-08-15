@@ -29,7 +29,7 @@ interface ElementEntry extends BaseEntry {
 	props: AnimateProps;
 }
 
-export interface AnimateEntry extends ElementEntry {
+interface AnimateEntry extends ElementEntry {
 	readonly kind: 'animate';
 	options: AnimateDefaults;
 }
@@ -38,7 +38,7 @@ export interface SetEntry extends ElementEntry {
 	readonly kind: 'set';
 }
 
-export interface CallEntry extends BaseEntry {
+interface CallEntry extends BaseEntry {
 	readonly kind: 'call';
 	callback: () => void;
 }

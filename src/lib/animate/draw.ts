@@ -19,7 +19,7 @@
  */
 
 import { animate } from './core/animate';
-import { isBrowser } from '$lib/shared/browser';
+import { isBrowser } from '../shared/browser';
 import { noopController } from './core/controller';
 import type { AnimateDefaults, AnimationController } from './types';
 
