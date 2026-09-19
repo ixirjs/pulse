@@ -44,3 +44,24 @@ describe('measureWithoutAncestorTransforms()', () => {
 		expect(observed[1]).toEqual(['20px', '']);
 	});
 });
+
+describe('will-change hint', () => {
+	it('is set for the first channel, held across overlap, and restored after the last', () => {
+		const element = document.createElement('div');
+		document.body.appendChild(element);
+		mounted.push(element);
+		element.style.setProperty('will-change', 'opacity');
+		const x = VAR_BIT['--motion-x']!;
+		const y = VAR_BIT['--motion-y']!;
+
+		registerTransformAnimation(element, x);
+		expect(element.style.getPropertyValue('will-change')).toBe('translate, scale, rotate');
+
+		registerTransformAnimation(element, y);
+		deregisterTransformAnimation(element, x);
+		expect(element.style.getPropertyValue('will-change')).toBe('translate, scale, rotate');
+
+		deregisterTransformAnimation(element, y);
+		expect(element.style.getPropertyValue('will-change')).toBe('opacity');
+	});
+});

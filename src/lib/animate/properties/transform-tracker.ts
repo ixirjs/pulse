@@ -6,6 +6,10 @@
  * has a running `animate()` transform animation, so `getBoundingClientRect()`
  * returns the element's "at rest" layout position even mid-animation.
  *
+ * The tracker also owns the `will-change` hint that earns a transform-animated
+ * element its own compositor layer, since the same ref-count says exactly when
+ * to set and clear it.
+ *
  * The tracker is intentionally separate from the property registry so the
  * static registry data and the dynamic runtime state live in different modules.
  */
@@ -60,12 +64,28 @@ const forEachBit = (bits: number, fn: (i: number) => void): void => {
 
 /**
  * Can we write inline styles to this node? Duck-typed rather than an
- * `instanceof HTMLElement` check: the capability is what we actually need, and
- * it also holds for elements from another realm, such as an iframe, and under
- * SSR, where those globals do not exist.
+ * `instanceof HTMLElement` check: the ref-counting entry points also run under
+ * SSR, where those globals do not exist, and the capability is what we actually
+ * need — it also holds for elements from another realm, such as an iframe.
  */
 const isMutableElement = (n: Element): n is MotionElement =>
 	typeof (n as Partial<MotionElement>).style?.setProperty === 'function';
+
+/** True while the element has at least one `animate()` transform channel running. */
+export const hasActiveTransforms = (element: Element): boolean =>
+	(activeTransformBits.get(element) ?? 0) !== 0;
+
+const WILL_CHANGE = 'will-change';
+/**
+ * Hint the three properties the motion templates drive. Chromium promotes an
+ * element for an active *transform* animation, but a custom-property animation
+ * earns no layer, so without this the element repaints every frame — shadows,
+ * borders and all. The element already has non-`none` `translate`/`scale` once
+ * wired, so it is a stacking context either way and the hint changes nothing
+ * observable.
+ */
+const WILL_CHANGE_VALUE = 'translate, scale, rotate';
+const savedWillChange = new WeakMap<Element, SavedStyleProp>();
 
 /** Mark that an element has started a WAAPI transform animation. */
 export const registerTransformAnimation = (element: Element, bits: number): void => {
@@ -73,6 +93,10 @@ export const registerTransformAnimation = (element: Element, bits: number): void
 	if (!counts) {
 		counts = new Uint8Array(N_TRANSFORM_VARS);
 		activeTransformCounts.set(element, counts);
+		if (isMutableElement(element)) {
+			savedWillChange.set(element, saveStyleProp(element.style, WILL_CHANGE));
+			element.style.setProperty(WILL_CHANGE, WILL_CHANGE_VALUE);
+		}
 	}
 	let activeBits = activeTransformBits.get(element) ?? 0;
 	forEachBit(bits, (i) => {
@@ -92,6 +116,11 @@ export const deregisterTransformAnimation = (element: Element, bits: number): vo
 	if (activeBits === 0) {
 		activeTransformCounts.delete(element);
 		activeTransformBits.delete(element);
+		const saved = savedWillChange.get(element);
+		if (saved && isMutableElement(element)) {
+			savedWillChange.delete(element);
+			restoreStyleProp(element.style, WILL_CHANGE, saved);
+		}
 	} else {
 		activeTransformBits.set(element, activeBits);
 	}
