@@ -4,7 +4,8 @@ import type { KeyframeGroup } from './keyframes';
 
 const group = (keyframes: Record<string, string[]>, duration = 400): KeyframeGroup => ({
 	timing: { duration, easing: 'linear', delay: 0 },
-	keyframes
+	keyframes,
+	compositable: true
 });
 
 const ownAll = () => true;
