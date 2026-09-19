@@ -69,4 +69,23 @@ describe('draggable()', () => {
 		cleanup?.();
 		expect(el.style.touchAction).toBe('auto');
 	});
+
+	it('holds a compositor layer for the drag and releases it once settled', async () => {
+		const el = mount();
+		el.style.setProperty('will-change', 'opacity');
+		const cleanup = draggable({ snapToOrigin: true })(el);
+
+		el.dispatchEvent(pointer('pointerdown', 0, 0));
+		el.dispatchEvent(pointer('pointermove', 50, 30));
+		expect(el.style.getPropertyValue('will-change')).toBe('translate, scale, rotate');
+
+		el.dispatchEvent(pointer('pointerup', 50, 30));
+		// The flick keeps writing after the pointer is gone, so the layer outlives
+		// pointerup and is handed back only when the spring stops.
+		expect(el.style.getPropertyValue('will-change')).toBe('translate, scale, rotate');
+		await expect
+			.poll(() => el.style.getPropertyValue('will-change'), { timeout: 3000 })
+			.toBe('opacity');
+		cleanup?.();
+	});
 });

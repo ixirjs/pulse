@@ -22,12 +22,21 @@
 import { createController, noopController } from './controller';
 import { buildKeyframes, type KeyframeGroup } from '../keyframes/keyframes';
 import { normalizeInput } from '../keyframes/normalize';
-import { deregisterTransformAnimation, registerTransformAnimation } from '../properties/properties';
+import {
+	demoteFoldedTransforms,
+	deregisterTransformAnimation,
+	hasActiveTransforms,
+	registerFoldedTransforms,
+	registerTransformAnimation,
+	type FoldedTransform
+} from '../properties/properties';
 import {
 	ensurePropertiesRegistered,
 	ensureTransformWired,
+	isTransformOwned,
 	wireTransform
 } from '../properties/transform-setup';
+import { applyFolds, planFolds } from '../keyframes/fold';
 import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from '../types';
 import { isBrowser, shouldReduceMotion } from '../../shared/browser';
 import { formatValue, resolveProp } from '../properties/prop-utils';
@@ -60,20 +69,71 @@ export const animate = (
 		return noopController(element, defaults);
 	}
 
+	// Read before registering: an element with no transform channel in flight is
+	// one whose transform we can drive directly for the length of this call.
+	const canFold = needsTransform && !hasActiveTransforms(element);
+
 	if (needsTransform) {
 		ensureTransformWired(element);
 		registerTransformAnimation(element, transformBits);
 	}
 
+	const folds = canFold ? foldTransforms(element, groups) : [];
+	const animations = buildAnimations(element, groups, defaults);
+	if (folds.length > 0) {
+		registerFoldedTransforms(
+			element,
+			folds.map(({ groupIndex, varFrames, targets }) => ({
+				animation: animations[groupIndex]!,
+				varFrames,
+				targets
+			}))
+		);
+	}
+
 	return createController({
 		element,
-		animations: buildAnimations(element, groups, defaults),
+		animations,
 		defaults,
 		finalStyles,
 		restorations,
 		onTeardown: needsTransform
-			? () => deregisterTransformAnimation(element, transformBits)
+			? () => {
+					demoteFoldedTransforms(element);
+					deregisterTransformAnimation(element, transformBits);
+				}
 			: undefined
+	});
+};
+
+type PendingFold = Omit<FoldedTransform, 'animation'> & { groupIndex: number };
+
+/**
+ * Collapse this call's transform-variable keyframes into direct
+ * `translate` / `scale` / `rotate` keyframes wherever possible, so Chromium can
+ * run them on the compositor instead of recalculating style every frame.
+ * Mutates `groups`, and returns what the tracker needs to undo the fold.
+ */
+const foldTransforms = (element: MotionElement, groups: KeyframeGroup[]): PendingFold[] => {
+	const computed = window.getComputedStyle(element);
+	const plans = planFolds(
+		groups,
+		(name) => computed.getPropertyValue(name).trim(),
+		// An unset inline value means the template never took (no CSS typed-OM
+		// support for these properties), leaving nothing to fold onto.
+		(target) => isTransformOwned(element, target) && !!element.style.getPropertyValue(target)
+	);
+	if (plans.length === 0) return [];
+	const originals = applyFolds(groups, plans);
+	return [...originals].map(([groupIndex, keyframes]) => {
+		const { offset } = groups[groupIndex]!;
+		return {
+			groupIndex,
+			varFrames: (offset ? { ...keyframes, offset } : keyframes) as PropertyIndexedKeyframes,
+			targets: plans
+				.filter((plan) => plan.groupIndex === groupIndex)
+				.map((plan) => [plan.target, element.style.getPropertyValue(plan.target)] as const)
+		};
 	});
 };
 

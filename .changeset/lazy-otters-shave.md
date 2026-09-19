@@ -16,4 +16,3 @@ the listeners down:
 <!-- after -->
 <div {@attach enabled ? draggable() : undefined}>…</div>
 ```
-

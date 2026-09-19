@@ -28,6 +28,22 @@ export const formatValue = (value: AnimatableValue, def: PropDef): string =>
 export const toKeyframeKey = (css: string): string =>
 	css.startsWith('--') ? css : css.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
 
+/**
+ * Properties Chromium can run on the compositor. Transform components qualify
+ * through `def.transform`, so only the non-transform ones are listed here.
+ */
+const COMPOSITABLE_CSS = new Set(['opacity', 'filter', 'backdrop-filter']);
+
+/**
+ * Whether an animation of this property can run off the main thread.
+ *
+ * Compositing is decided per effect, not per property: one non-compositable
+ * property pins everything animating alongside it, so a `width` would drag a
+ * sibling `opacity` down with it. Grouping keeps the two apart.
+ */
+export const isCompositable = (def: PropDef): boolean =>
+	def.transform === true || COMPOSITABLE_CSS.has(def.css);
+
 /** Cache passthrough PropDefs for unknown keys to avoid repeat regex/string work. */
 const UNKNOWN_PROP_CACHE = new Map<string, PropDef>();
 

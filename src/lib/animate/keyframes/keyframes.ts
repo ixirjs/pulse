@@ -10,6 +10,7 @@ import { isBrowser } from '../../shared/browser';
 import { isAutoKeyword, measureKeywordValue } from './keyword';
 import {
 	formatValue,
+	isCompositable,
 	readCurrentValue,
 	resolveProp,
 	toKeyframeKey
@@ -18,6 +19,13 @@ import {
 export interface KeyframeGroup {
 	timing: { duration: number; easing: string; delay: number };
 	keyframes: Record<string, string[]>;
+	/**
+	 * Whether every prop in this group can be composited. Props are never merged
+	 * across this boundary, so the compositable half of a mixed `animate()` call
+	 * keeps its own effect instead of being pinned to the main thread by a
+	 * sibling that animates layout.
+	 */
+	compositable: boolean;
 	/**
 	 * Explicit keyframe offsets (0–1) for a multi-stop sequence. Present only
 	 * for groups carrying a single offset-bearing prop, so it never conflicts
@@ -84,12 +92,14 @@ const resolveStop = (
  *  to the single prop that requested it. */
 const findGroup = (
 	groups: KeyframeGroup[],
-	timing: KeyframeGroup['timing']
+	timing: KeyframeGroup['timing'],
+	compositable: boolean
 ): KeyframeGroup | undefined => {
 	for (const group of groups) {
 		const t = group.timing;
 		if (
 			group.offset === undefined &&
+			group.compositable === compositable &&
 			t.duration === timing.duration &&
 			t.delay === timing.delay &&
 			t.easing === timing.easing
@@ -146,10 +156,12 @@ export const buildKeyframes = (
 		}
 		finalStyles.push({ css: def.css, value: values[values.length - 1]! });
 
-		// Offset-bearing props get a private group; everything else merges by timing.
-		let group = offset ? undefined : findGroup(groups, timing);
+		// Offset-bearing props get a private group; everything else merges by
+		// timing, within its compositability class.
+		const compositable = isCompositable(def);
+		let group = offset ? undefined : findGroup(groups, timing, compositable);
 		if (!group) {
-			group = { timing, keyframes: {}, offset };
+			group = { timing, keyframes: {}, offset, compositable };
 			groups.push(group);
 		}
 		// WAAPI keyframes are keyed by camelCased IDL names; hyphenated multi-word

@@ -208,5 +208,10 @@ export {
 	VAR_BIT,
 	registerTransformAnimation,
 	deregisterTransformAnimation,
-	measureWithoutAncestorTransforms
+	registerFoldedTransforms,
+	hintTransformLayer,
+	demoteFoldedTransforms,
+	hasActiveTransforms,
+	measureWithoutAncestorTransforms,
+	type FoldedTransform
 } from './transform-tracker';

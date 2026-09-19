@@ -142,3 +142,43 @@ describe('buildKeyframes() — multi-stop sequences', () => {
 		expect(groups[0]!.offset).toBeUndefined();
 	});
 });
+
+describe('buildKeyframes() — compositability grouping', () => {
+	it('keeps a layout-animating prop out of the compositable group', () => {
+		const { groups } = buildKeyframes(
+			el,
+			{ opacity: ['0', '1'], width: ['0px', '100px'] },
+			{ duration: 300 }
+		);
+
+		// One effect per class: a `width` in the same effect would pin the
+		// opacity to the main thread alongside it.
+		expect(groups).toHaveLength(2);
+		expect(groups.find((group) => group.compositable)!.keyframes).toEqual({
+			opacity: ['0', '1']
+		});
+		expect(groups.find((group) => !group.compositable)!.keyframes).toEqual({
+			width: ['0px', '100px']
+		});
+	});
+
+	it('still merges props that are compositable together', () => {
+		const { groups } = buildKeyframes(
+			el,
+			{ opacity: ['0', '1'], x: ['0px', '100px'], filter: ['none', 'blur(2px)'] },
+			{ duration: 300 }
+		);
+
+		expect(groups).toHaveLength(1);
+	});
+
+	it('groups several layout props together rather than one effect each', () => {
+		const { groups } = buildKeyframes(
+			el,
+			{ width: ['0px', '10px'], height: ['0px', '10px'] },
+			{ duration: 300 }
+		);
+
+		expect(groups).toHaveLength(1);
+	});
+});

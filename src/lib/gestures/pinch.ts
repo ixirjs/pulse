@@ -17,6 +17,7 @@ import { applyConstraint, type AxisBounds } from './constraints';
 import type { MotionElement } from '../animate';
 import { capture, lockTouchAction, release } from './pointer-capture';
 import { wireTransform } from '../animate/properties/transform-setup';
+import { hintTransformLayer } from '../animate/properties/properties';
 
 export interface PinchInfo {
 	/** Distance ratio of the two pointers relative to gesture start. */
@@ -62,6 +63,14 @@ export const pinchable = (options: PinchableOptions = {}): Attachment<MotionElem
 		// Live pointer positions keyed by pointerId; at most two are tracked.
 		const points = new Map<number, { x: number; y: number }>();
 		let pinching = false;
+		// The scale/rotate writes are synchronous with the pointers, so the layer
+		// is wanted for exactly as long as two fingers are down.
+		let dropLayer: (() => void) | null = null;
+		const releaseLayer = (): void => {
+			const drop = dropLayer;
+			dropLayer = null;
+			drop?.();
+		};
 		let startDistance = 0;
 		let startAngle = 0;
 
@@ -91,6 +100,7 @@ export const pinchable = (options: PinchableOptions = {}): Attachment<MotionElem
 			// Gesture begins once the second pointer is down.
 			if (points.size === 2 && !pinching) {
 				pinching = true;
+				if (applyTransform) dropLayer ??= hintTransformLayer(element);
 				const [a, b] = [...points.values()];
 				startDistance = distance(a.x, a.y, b.x, b.y);
 				startAngle = rotate ? angle(a.x, a.y, b.x, b.y) : 0;
@@ -120,6 +130,7 @@ export const pinchable = (options: PinchableOptions = {}): Attachment<MotionElem
 			if (pinching) onEnd?.(read(), element);
 			// Lifting either pointer ends the gesture and resets.
 			pinching = false;
+			releaseLayer();
 			points.delete(event.pointerId);
 		};
 
@@ -133,6 +144,7 @@ export const pinchable = (options: PinchableOptions = {}): Attachment<MotionElem
 		return () => {
 			unlisten();
 			points.clear();
+			releaseLayer();
 			unlockTouchAction();
 		};
 	};

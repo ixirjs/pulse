@@ -6,6 +6,13 @@
  * has a running `animate()` transform animation, so `getBoundingClientRect()`
  * returns the element's "at rest" layout position even mid-animation.
  *
+ * The tracker also owns the two things that keep a transform animation off the
+ * main thread: the `will-change` hint that gets the element its own layer, and
+ * the registry of *folded* animations — ones that drive `translate` / `scale` /
+ * `rotate` directly instead of the motion vars (see `keyframes/fold`). A fold
+ * is only valid while nothing else touches the element's transform, so this
+ * module demotes it back to the variable path the moment that stops holding.
+ *
  * The tracker is intentionally separate from the property registry so the
  * static registry data and the dynamic runtime state live in different modules.
  */
@@ -58,12 +65,90 @@ const forEachBit = (bits: number, fn: (i: number) => void): void => {
 	}
 };
 
+/**
+ * Can we write inline styles to this node? Duck-typed rather than an
+ * `instanceof HTMLElement` check: the ref-counting entry points also run under
+ * SSR, where those globals do not exist, and the capability is what we actually
+ * need — it also holds for elements from another realm, such as an iframe.
+ */
+const isMutableElement = (n: Element): n is MotionElement =>
+	typeof (n as Partial<MotionElement>).style?.setProperty === 'function';
+
+/** True while the element has at least one `animate()` transform channel running. */
+export const hasActiveTransforms = (element: Element): boolean =>
+	(activeTransformBits.get(element) ?? 0) !== 0;
+
+const WILL_CHANGE = 'will-change';
+/**
+ * Hint the three properties the motion templates drive. Chromium promotes an
+ * element for an active *transform* animation, but a custom-property animation
+ * earns no layer, so without this the element repaints every frame — shadows,
+ * borders and all. The element already has non-`none` `translate`/`scale` once
+ * wired, so it is a stacking context either way and the hint changes nothing
+ * observable.
+ */
+const WILL_CHANGE_VALUE = 'translate, scale, rotate';
+const savedWillChange = new WeakMap<Element, SavedStyleProp>();
+/**
+ * Ref-count for the hint itself, separate from the per-channel transform
+ * counts: a `animate()` call and a drag can both want the layer at once, and
+ * whichever finishes first must not take it away from the other.
+ */
+const layerHintCounts = new WeakMap<Element, number>();
+
+const retainLayerHint = (element: Element): void => {
+	const count = layerHintCounts.get(element) ?? 0;
+	layerHintCounts.set(element, count + 1);
+	if (count > 0 || !isMutableElement(element)) return;
+	savedWillChange.set(element, saveStyleProp(element.style, WILL_CHANGE));
+	element.style.setProperty(WILL_CHANGE, WILL_CHANGE_VALUE);
+};
+
+const releaseLayerHint = (element: Element): void => {
+	const count = layerHintCounts.get(element) ?? 0;
+	if (count === 0) return;
+	if (count > 1) {
+		layerHintCounts.set(element, count - 1);
+		return;
+	}
+	layerHintCounts.delete(element);
+	const saved = savedWillChange.get(element);
+	if (!saved || !isMutableElement(element)) return;
+	savedWillChange.delete(element);
+	restoreStyleProp(element.style, WILL_CHANGE, saved);
+};
+
+/**
+ * Hold a compositor layer for an element whose `--motion-*` values are being
+ * written directly, which is what every gesture does: they drive the vars by
+ * hand rather than through `animate()`, so nothing else would hint them and a
+ * dragged card with a shadow repaints on every pointer event.
+ *
+ * Scope the call to the active gesture, not to attachment setup — a permanent
+ * hint is a permanent layer, and a long list would hold one per row. The
+ * returned release is idempotent, so a gesture that ends twice is safe.
+ */
+export const hintTransformLayer = (element: Element): (() => void) => {
+	retainLayerHint(element);
+	let released = false;
+	return () => {
+		if (released) return;
+		released = true;
+		releaseLayerHint(element);
+	};
+};
+
 /** Mark that an element has started a WAAPI transform animation. */
 export const registerTransformAnimation = (element: Element, bits: number): void => {
+	// A fold owns `translate`/`scale`/`rotate` outright, which would mask the
+	// variable channel the incoming animation is about to drive. Hand the
+	// element back to the vars before it starts.
+	demoteFoldedTransforms(element);
 	let counts = activeTransformCounts.get(element);
 	if (!counts) {
 		counts = new Uint8Array(N_TRANSFORM_VARS);
 		activeTransformCounts.set(element, counts);
+		retainLayerHint(element);
 	}
 	let activeBits = activeTransformBits.get(element) ?? 0;
 	forEachBit(bits, (i) => {
@@ -83,8 +168,91 @@ export const deregisterTransformAnimation = (element: Element, bits: number): vo
 	if (activeBits === 0) {
 		activeTransformCounts.delete(element);
 		activeTransformBits.delete(element);
+		releaseLayerHint(element);
 	} else {
 		activeTransformBits.set(element, activeBits);
+	}
+};
+
+/**
+ * One WAAPI animation that has been folded onto a real transform property.
+ */
+export interface FoldedTransform {
+	animation: Animation;
+	/** The pre-fold, variable-driven keyframes, reinstated on demotion. */
+	varFrames: PropertyIndexedKeyframes;
+	/**
+	 * Transform properties this animation drives directly, each paired with the
+	 * inline template it temporarily overrides. Measurement reinstates the
+	 * template to read the element's resting box.
+	 */
+	targets: ReadonlyArray<readonly [string, string]>;
+}
+
+const foldedTransforms = new WeakMap<Element, FoldedTransform[]>();
+const foldObservers = new WeakMap<Element, MutationObserver>();
+const foldVarSnapshots = new WeakMap<Element, string[]>();
+
+/** Inline (not computed) motion-var values — no style recalc, safe to poll. */
+const readInlineVars = (element: MotionElement): string[] =>
+	MOTION_TRANSFORM_IDENTITIES.map(([name]) => element.style.getPropertyValue(name));
+
+/**
+ * Take ownership of an element's folded animations.
+ *
+ * A fold bakes the element's *other* motion vars into its keyframes, so any
+ * inline write to one of them leaves the animation showing a stale value. A
+ * style-attribute observer watches for exactly that and demotes, which is why
+ * gestures, presets and consumer code can keep writing `--motion-x` without
+ * knowing folds exist. Other style mutations — `pointer-events`, `opacity`, a
+ * measurement's save/restore round-trip — leave the baked values correct and
+ * are ignored.
+ */
+export const registerFoldedTransforms = (
+	element: MotionElement,
+	folds: readonly FoldedTransform[]
+): void => {
+	if (folds.length === 0) return;
+	foldedTransforms.set(element, [...folds]);
+	if (typeof MutationObserver === 'undefined') return;
+	const before = readInlineVars(element);
+	foldVarSnapshots.set(element, before);
+	const observer = new MutationObserver(() => {
+		const snapshot = foldVarSnapshots.get(element);
+		if (!snapshot) return;
+		const now = readInlineVars(element);
+		for (let i = 0; i < now.length; i++) {
+			if (now[i] !== snapshot[i]) {
+				demoteFoldedTransforms(element);
+				return;
+			}
+		}
+	});
+	observer.observe(element, { attributes: true, attributeFilter: ['style'] });
+	foldObservers.set(element, observer);
+};
+
+/**
+ * Put folded animations back on the variable path, in place.
+ *
+ * `setKeyframes` swaps an effect's values without touching its timing, so
+ * `currentTime`, playback state and the `finished` promise all survive and the
+ * animation carries on from the same visual position. Safe to call on an
+ * element that has no folds, and safe to call twice.
+ *
+ * ponytail: demotion is per element, not per transform property — a write to
+ * `--motion-x` also gives back a folded `rotate` that nothing touched. Split it
+ * per target if a trace ever shows that costing a frame.
+ */
+export const demoteFoldedTransforms = (element: Element): void => {
+	foldObservers.get(element)?.disconnect();
+	foldObservers.delete(element);
+	foldVarSnapshots.delete(element);
+	const folds = foldedTransforms.get(element);
+	if (!folds) return;
+	foldedTransforms.delete(element);
+	for (const { animation, varFrames } of folds) {
+		(animation.effect as KeyframeEffect | null)?.setKeyframes(varFrames);
 	}
 };
 
@@ -107,9 +275,6 @@ export const deregisterTransformAnimation = (element: Element, bits: number): vo
 type SavedProp = { name: string; saved: SavedStyleProp };
 type Suppressed = { node: MotionElement; props: SavedProp[] };
 
-const isMutableElement = (n: Element): n is MotionElement =>
-	n instanceof HTMLElement || n instanceof SVGElement;
-
 export const measureWithoutAncestorTransforms = (
 	el: Element,
 	{ suppressSelf = true }: { suppressSelf?: boolean } = {}
@@ -125,6 +290,17 @@ export const measureWithoutAncestorTransforms = (
 			props.push({ name, saved: saveStyleProp(target.style, name) });
 			target.style.setProperty(name, identity, 'important');
 		});
+		// A folded animation drives `translate`/`scale`/`rotate` itself, so
+		// forcing the vars to identity no longer reaches it. Reinstating the
+		// template with `!important` does: the template reads the vars we just
+		// neutralised, so the element measures at rest exactly as on the
+		// variable path.
+		for (const { targets } of foldedTransforms.get(target) ?? []) {
+			for (const [name, template] of targets) {
+				props.push({ name, saved: saveStyleProp(target.style, name) });
+				target.style.setProperty(name, template, 'important');
+			}
+		}
 		if (props.length > 0) suppressed.push({ node: target, props });
 	};
 
