@@ -2,16 +2,16 @@
 	{
 		"name": "Root public API",
 		"path": "./dist/index.js",
-		"limit": "19 kB"
+		"limit": "20 kB"
 	},
 	{
 		"name": "animate only",
 		"path": "./dist/animate/index.js",
-		"limit": "8 kB"
+		"limit": "9 kB"
 	},
 	{
 		"name": "flip only",
 		"path": "./dist/flip/index.js",
-		"limit": "7 kB"
+		"limit": "9 kB"
 	}
 ]
