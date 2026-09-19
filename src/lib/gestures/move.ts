@@ -83,8 +83,9 @@ export const moveable = (options: MoveableOptions = {}): Attachment<MotionElemen
 
 		const ignore = (event: PointerEvent): boolean => !includeTouch && event.pointerType === 'touch';
 
-		const measure = (event: PointerEvent): MoveInfo => {
-			const rect = element.getBoundingClientRect();
+		// The rect is passed in, not read here: `pull` needs the same one, and a
+		// spring write between two reads would force a second layout.
+		const measure = (event: PointerEvent, rect: DOMRect): MoveInfo => {
 			const localX = event.clientX - rect.left;
 			const localY = event.clientY - rect.top;
 			return {
@@ -97,21 +98,22 @@ export const moveable = (options: MoveableOptions = {}): Attachment<MotionElemen
 			};
 		};
 
-		const pull = (info: MoveInfo): void => {
+		const pull = (info: MoveInfo, rect: DOMRect): void => {
 			// Magnetic offset is the pointer's distance from centre, scaled. Written
 			// live with jump() (synchronous) — the pointer path is already smooth.
-			springX!.jump((info.nx * element.getBoundingClientRect().width * strength) / 2);
-			springY!.jump((info.ny * element.getBoundingClientRect().height * strength) / 2);
+			springX!.jump((info.nx * rect.width * strength) / 2);
+			springY!.jump((info.ny * rect.height * strength) / 2);
 		};
 
 		const onEnter = (event: PointerEvent): void => {
 			if (ignore(event)) return;
-			onMoveStart?.(measure(event), element);
+			onMoveStart?.(measure(event, element.getBoundingClientRect()), element);
 		};
 		const onPointerMove = (event: PointerEvent): void => {
 			if (ignore(event)) return;
-			const info = measure(event);
-			if (applyTransform) pull(info);
+			const rect = element.getBoundingClientRect();
+			const info = measure(event, rect);
+			if (applyTransform) pull(info, rect);
 			onMove?.(info, element);
 		};
 		const onLeave = (event: PointerEvent): void => {
