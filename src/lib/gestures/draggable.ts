@@ -19,6 +19,7 @@ import type { SpringOptions } from '../shared/types';
 import { createSpringValue } from '../animate/spring-value';
 import { capture, lockTouchAction, release } from './pointer-capture';
 import { wireTransform } from '../animate/properties/transform-setup';
+import { hintTransformLayer } from '../animate/properties/properties';
 import { applyConstraint, xBounds, yBounds, type DragConstraints } from './constraints';
 
 export type DragAxis = 'x' | 'y' | 'both';
@@ -85,6 +86,14 @@ export const draggable = (options: DraggableOptions = {}): Attachment<MotionElem
 			: springY.subscribe((v) => element.style.setProperty('--motion-y', `${v}px`));
 
 		let dragging = false;
+		// Held from pointerdown until the spring stops writing, which is after the
+		// release flick has settled — not at pointerup.
+		let dropLayer: (() => void) | null = null;
+		const releaseLayer = (): void => {
+			const drop = dropLayer;
+			dropLayer = null;
+			drop?.();
+		};
 		let pointerId = -1;
 		let startX = 0;
 		let startY = 0;
@@ -103,6 +112,7 @@ export const draggable = (options: DraggableOptions = {}): Attachment<MotionElem
 		const onPointerDown = (event: PointerEvent): void => {
 			if (dragging || event.button !== 0) return;
 			dragging = true;
+			dropLayer ??= hintTransformLayer(element);
 			pointerId = event.pointerId;
 			capture(element, pointerId);
 			// Resume from wherever the spring currently sits (interrupt-friendly).
@@ -146,6 +156,10 @@ export const draggable = (options: DraggableOptions = {}): Attachment<MotionElem
 			release(element, pointerId);
 			onEnd?.(info(springX.current, springY.current), element);
 			settle();
+			// A new drag may start before the flick settles; it keeps the layer.
+			void Promise.all([springX.finished, springY.finished]).then(() => {
+				if (!dragging) releaseLayer();
+			});
 		};
 
 		const unlisten = listen(element, {
@@ -161,6 +175,7 @@ export const draggable = (options: DraggableOptions = {}): Attachment<MotionElem
 			unsubY();
 			springX.stop();
 			springY.stop();
+			releaseLayer();
 			unlockTouchAction();
 		};
 	};

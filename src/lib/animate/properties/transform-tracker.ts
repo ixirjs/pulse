@@ -89,6 +89,54 @@ const WILL_CHANGE = 'will-change';
  */
 const WILL_CHANGE_VALUE = 'translate, scale, rotate';
 const savedWillChange = new WeakMap<Element, SavedStyleProp>();
+/**
+ * Ref-count for the hint itself, separate from the per-channel transform
+ * counts: a `animate()` call and a drag can both want the layer at once, and
+ * whichever finishes first must not take it away from the other.
+ */
+const layerHintCounts = new WeakMap<Element, number>();
+
+const retainLayerHint = (element: Element): void => {
+	const count = layerHintCounts.get(element) ?? 0;
+	layerHintCounts.set(element, count + 1);
+	if (count > 0 || !isMutableElement(element)) return;
+	savedWillChange.set(element, saveStyleProp(element.style, WILL_CHANGE));
+	element.style.setProperty(WILL_CHANGE, WILL_CHANGE_VALUE);
+};
+
+const releaseLayerHint = (element: Element): void => {
+	const count = layerHintCounts.get(element) ?? 0;
+	if (count === 0) return;
+	if (count > 1) {
+		layerHintCounts.set(element, count - 1);
+		return;
+	}
+	layerHintCounts.delete(element);
+	const saved = savedWillChange.get(element);
+	if (!saved || !isMutableElement(element)) return;
+	savedWillChange.delete(element);
+	restoreStyleProp(element.style, WILL_CHANGE, saved);
+};
+
+/**
+ * Hold a compositor layer for an element whose `--motion-*` values are being
+ * written directly, which is what every gesture does: they drive the vars by
+ * hand rather than through `animate()`, so nothing else would hint them and a
+ * dragged card with a shadow repaints on every pointer event.
+ *
+ * Scope the call to the active gesture, not to attachment setup — a permanent
+ * hint is a permanent layer, and a long list would hold one per row. The
+ * returned release is idempotent, so a gesture that ends twice is safe.
+ */
+export const hintTransformLayer = (element: Element): (() => void) => {
+	retainLayerHint(element);
+	let released = false;
+	return () => {
+		if (released) return;
+		released = true;
+		releaseLayerHint(element);
+	};
+};
 
 /** Mark that an element has started a WAAPI transform animation. */
 export const registerTransformAnimation = (element: Element, bits: number): void => {
@@ -100,10 +148,7 @@ export const registerTransformAnimation = (element: Element, bits: number): void
 	if (!counts) {
 		counts = new Uint8Array(N_TRANSFORM_VARS);
 		activeTransformCounts.set(element, counts);
-		if (isMutableElement(element)) {
-			savedWillChange.set(element, saveStyleProp(element.style, WILL_CHANGE));
-			element.style.setProperty(WILL_CHANGE, WILL_CHANGE_VALUE);
-		}
+		retainLayerHint(element);
 	}
 	let activeBits = activeTransformBits.get(element) ?? 0;
 	forEachBit(bits, (i) => {
@@ -123,11 +168,7 @@ export const deregisterTransformAnimation = (element: Element, bits: number): vo
 	if (activeBits === 0) {
 		activeTransformCounts.delete(element);
 		activeTransformBits.delete(element);
-		const saved = savedWillChange.get(element);
-		if (saved && isMutableElement(element)) {
-			savedWillChange.delete(element);
-			restoreStyleProp(element.style, WILL_CHANGE, saved);
-		}
+		releaseLayerHint(element);
 	} else {
 		activeTransformBits.set(element, activeBits);
 	}

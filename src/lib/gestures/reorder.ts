@@ -27,6 +27,7 @@ import { listen } from '../shared/listen';
 import { snapshotRect, flipFrom } from '../flip';
 import type { EasingFn } from '../shared/types';
 import { wireTransform } from '../animate/properties/transform-setup';
+import { hintTransformLayer } from '../animate/properties/properties';
 import { restoreStyleProp, saveStyleProp, type SavedStyleProp } from '../shared/inline-style';
 import { capture, lockTouchAction, release } from './pointer-capture';
 
@@ -103,6 +104,8 @@ interface DragState {
 	styles: Map<HTMLElement, DragStyleSnapshot>;
 	/** Detaches the move/up/cancel listeners this drag installed. */
 	unlisten: () => void;
+	/** Releases the compositor-layer hint held on every row for this drag. */
+	dropLayers: Array<() => void>;
 }
 
 /** Create a reorder controller for one list. */
@@ -130,6 +133,9 @@ export const reorder = <T>(options: ReorderOptions<T>): ReorderHandle<T> => {
 
 	const restoreDrag = (state: DragState): void => {
 		for (const node of state.els) restoreDragStyles(node, state.styles.get(node)!);
+		// The settle FLIP that follows goes through `animate()`, which takes its
+		// own hint, so there is no gap between the two.
+		for (const drop of state.dropLayers) drop();
 	};
 
 	/** Slide siblings into the dragged row's actual slot, including variable item sizes and gaps. */
@@ -224,7 +230,10 @@ export const reorder = <T>(options: ReorderOptions<T>): ReorderHandle<T> => {
 					pointermove: onMove,
 					pointerup: endDrag,
 					pointercancel: endDrag
-				})
+				}),
+				// Every row moves during a drag: the dragged one follows the pointer,
+				// the rest slide into its vacated slot.
+				dropLayers: rows.map((node) => hintTransformLayer(node))
 			};
 
 			// Reorder owns only its dedicated motion channel and temporary drag

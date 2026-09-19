@@ -209,6 +209,7 @@ export {
 	registerTransformAnimation,
 	deregisterTransformAnimation,
 	registerFoldedTransforms,
+	hintTransformLayer,
 	demoteFoldedTransforms,
 	hasActiveTransforms,
 	measureWithoutAncestorTransforms,

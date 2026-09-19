@@ -70,4 +70,16 @@ describe('moveable()', () => {
 		expect(onMove).not.toHaveBeenCalled();
 		cleanup?.();
 	});
+
+	it('holds a compositor layer from pointerenter through the spring back', async () => {
+		const el = mount();
+		const cleanup = moveable({ applyTransform: true })(el);
+
+		el.dispatchEvent(pointer('pointerenter', 150, 100));
+		expect(el.style.getPropertyValue('will-change')).toBe('translate, scale, rotate');
+
+		el.dispatchEvent(pointer('pointerleave', 150, 100));
+		await expect.poll(() => el.style.getPropertyValue('will-change'), { timeout: 3000 }).toBe('');
+		cleanup?.();
+	});
 });

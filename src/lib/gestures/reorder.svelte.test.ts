@@ -193,4 +193,22 @@ describe('reorder()', () => {
 		els[0]!.dispatchEvent(pointer('pointerup', 120));
 		expect(order).toEqual(['a', 'b', 'c']);
 	});
+
+	it('holds a compositor layer on every row for the duration of a drag', () => {
+		const { values, els } = setup();
+		let order = [...values];
+		const r = reorder<string>({ items: () => order, onReorder: (next) => (order = next) });
+		els.forEach((el, i) => r.item(values[i]!)(el));
+
+		els[0]!.dispatchEvent(pointer('pointerdown', 20));
+		// Siblings slide into the vacated slot, so they are hinted too.
+		expect(els.map((el) => el.style.getPropertyValue('will-change'))).toEqual([
+			'translate, scale, rotate',
+			'translate, scale, rotate',
+			'translate, scale, rotate'
+		]);
+
+		els[0]!.dispatchEvent(pointer('pointerup', 20));
+		expect(els.map((el) => el.style.getPropertyValue('will-change'))).toEqual(['', '', '']);
+	});
 });

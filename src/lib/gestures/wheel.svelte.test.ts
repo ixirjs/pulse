@@ -91,4 +91,16 @@ describe('wheelable()', () => {
 		expect(onMove).toHaveBeenCalledOnce();
 		cleanup?.();
 	});
+
+	it('holds a compositor layer until the wheel goes quiet', async () => {
+		const el = mount();
+		const cleanup = wheelable({ speed: 0.01, endDelay: 20 })(el);
+
+		el.dispatchEvent(wheel(-100));
+		expect(el.style.getPropertyValue('will-change')).toBe('translate, scale, rotate');
+
+		// Released only after the idle timer fires and the smoothing spring rests.
+		await expect.poll(() => el.style.getPropertyValue('will-change'), { timeout: 3000 }).toBe('');
+		cleanup?.();
+	});
 });

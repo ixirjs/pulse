@@ -25,6 +25,7 @@ import type { MotionElement } from '../animate';
 import { createSpringValue } from '../animate/spring-value';
 import type { SpringOptions } from '../shared/types';
 import { wireTransform } from '../animate/properties/transform-setup';
+import { hintTransformLayer } from '../animate/properties/properties';
 
 export interface WheelInfo {
 	/** Accumulated scale since the element mounted (baseline 1). */
@@ -103,6 +104,15 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 					})
 				: null;
 
+		// Held from the first notch until the wheel goes quiet and the smoothing
+		// spring has finished writing.
+		let dropLayer: (() => void) | null = null;
+		const releaseLayer = (): void => {
+			const drop = dropLayer;
+			dropLayer = null;
+			drop?.();
+		};
+
 		let detachSpring: (() => void) | null = null;
 		if (applyTransform) {
 			wireTransform(element);
@@ -120,6 +130,10 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 		const finish = (): void => {
 			endTimer = null;
 			active = false;
+			// A notch arriving during the settle restarts the gesture and keeps it.
+			void Promise.resolve(springScale?.finished).then(() => {
+				if (!active) releaseLayer();
+			});
 			onEnd?.(info(0, 0), element);
 		};
 
@@ -133,6 +147,7 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 
 			if (!active) {
 				active = true;
+				if (applyTransform) dropLayer ??= hintTransformLayer(element);
 				onStart?.(info(event.deltaX, event.deltaY), element);
 			}
 			if (springScale) springScale.set(scale);

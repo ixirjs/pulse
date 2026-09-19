@@ -105,4 +105,20 @@ describe('pinchable()', () => {
 		expect(onMove).not.toHaveBeenCalled();
 		cleanup?.();
 	});
+
+	it('holds a compositor layer while both pointers are down', () => {
+		const el = mount();
+		const cleanup = pinchable()(el);
+
+		el.dispatchEvent(pointer('pointerdown', 1, 0, 0));
+		expect(el.style.getPropertyValue('will-change')).toBe('');
+
+		// The gesture, and the layer, begin on the second pointer.
+		el.dispatchEvent(pointer('pointerdown', 2, 100, 0));
+		expect(el.style.getPropertyValue('will-change')).toBe('translate, scale, rotate');
+
+		el.dispatchEvent(pointer('pointerup', 2, 100, 0));
+		expect(el.style.getPropertyValue('will-change')).toBe('');
+		cleanup?.();
+	});
 });

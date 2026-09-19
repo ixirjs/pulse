@@ -24,6 +24,7 @@ import type { MotionElement } from '../animate';
 import type { SpringOptions } from '../shared/types';
 import { createSpringValue } from '../animate/spring-value';
 import { wireTransform } from '../animate/properties/transform-setup';
+import { hintTransformLayer } from '../animate/properties/properties';
 
 export interface MoveInfo {
 	/** Pointer position in client coordinates. */
@@ -81,6 +82,16 @@ export const moveable = (options: MoveableOptions = {}): Attachment<MotionElemen
 			unsubY = springY!.subscribe((v) => element.style.setProperty('--motion-y', `${v}px`));
 		}
 
+		// Held while the pointer is over the element and through the spring-back
+		// after it leaves, which is still writing `--motion-x`.
+		let dropLayer: (() => void) | null = null;
+		const releaseLayer = (): void => {
+			const drop = dropLayer;
+			dropLayer = null;
+			drop?.();
+		};
+		let hovering = false;
+
 		const ignore = (event: PointerEvent): boolean => !includeTouch && event.pointerType === 'touch';
 
 		// The rect is passed in, not read here: `pull` needs the same one, and a
@@ -107,6 +118,8 @@ export const moveable = (options: MoveableOptions = {}): Attachment<MotionElemen
 
 		const onEnter = (event: PointerEvent): void => {
 			if (ignore(event)) return;
+			hovering = true;
+			if (applyTransform) dropLayer ??= hintTransformLayer(element);
 			onMoveStart?.(measure(event, element.getBoundingClientRect()), element);
 		};
 		const onPointerMove = (event: PointerEvent): void => {
@@ -118,9 +131,14 @@ export const moveable = (options: MoveableOptions = {}): Attachment<MotionElemen
 		};
 		const onLeave = (event: PointerEvent): void => {
 			if (ignore(event)) return;
+			hovering = false;
 			// Spring back to rest, carrying any momentum.
 			springX?.set(0);
 			springY?.set(0);
+			// Re-entering before the spring-back finishes keeps the layer.
+			void Promise.all([springX?.finished, springY?.finished]).then(() => {
+				if (!hovering) releaseLayer();
+			});
 			onMoveEnd?.(element);
 		};
 
@@ -132,6 +150,7 @@ export const moveable = (options: MoveableOptions = {}): Attachment<MotionElemen
 
 		return () => {
 			unlisten();
+			releaseLayer();
 			unsubX();
 			unsubY();
 			springX?.stop();
