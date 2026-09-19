@@ -4,6 +4,7 @@
  */
 
 import { isBrowser } from '../../shared/browser';
+import { demoteFoldedTransforms } from '../properties/properties';
 import { playbackControls } from '../../shared/playback';
 import type { AnimateDefaults, AnimationController, MotionElement } from '../types';
 import type { CssWrite } from '../keyframes/keyframes';
@@ -188,7 +189,15 @@ export const createController = ({
 		},
 		cancel: teardown,
 		stop: () => {
-			if (isBrowser()) commitComputedStyles(element, finalStyles);
+			if (isBrowser()) {
+				// `commitComputedStyles` reads the animated custom properties. While
+				// folded, those hold their pre-animation values and the live position
+				// lives on `translate`/`scale` instead, so hand the animation back to
+				// the variable path first — it keeps its current time, so the values
+				// read back are the ones on screen.
+				demoteFoldedTransforms(element);
+				commitComputedStyles(element, finalStyles);
+			}
 			teardown();
 		},
 		...playbackControls(forEachAnim)

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
 	deregisterTransformAnimation,
 	measureWithoutAncestorTransforms,
+	registerFoldedTransforms,
 	registerTransformAnimation,
 	VAR_BIT
 } from './transform-tracker';
@@ -63,5 +64,57 @@ describe('will-change hint', () => {
 
 		deregisterTransformAnimation(element, y);
 		expect(element.style.getPropertyValue('will-change')).toBe('opacity');
+	});
+});
+
+describe('folded transforms', () => {
+	const fold = (element: HTMLElement) => {
+		const animation = { effect: { setKeyframes: vi.fn() } } as unknown as Animation;
+		registerFoldedTransforms(element, [
+			{
+				animation,
+				varFrames: { '--flip-x': ['10px', '0px'] },
+				targets: [['translate', 'calc(var(--flip-x, 0px)) 0px 0px']]
+			}
+		]);
+		return animation;
+	};
+
+	it('reinstates the variable keyframes when another transform animation starts', () => {
+		const element = document.createElement('div');
+		document.body.appendChild(element);
+		mounted.push(element);
+		registerTransformAnimation(element, VAR_BIT['--flip-x']!);
+		const animation = fold(element);
+
+		registerTransformAnimation(element, VAR_BIT['--motion-x']!);
+
+		expect((animation.effect as KeyframeEffect).setKeyframes).toHaveBeenCalledWith({
+			'--flip-x': ['10px', '0px']
+		});
+	});
+
+	it('measures at rest by reinstating the template the fold overrides', () => {
+		const parent = document.createElement('div');
+		const child = document.createElement('div');
+		parent.appendChild(child);
+		document.body.appendChild(parent);
+		mounted.push(parent);
+		parent.style.setProperty('--flip-x', '10px');
+		registerTransformAnimation(parent, VAR_BIT['--flip-x']!);
+		fold(parent);
+		let observed: [string, string] | undefined;
+		vi.spyOn(child, 'getBoundingClientRect').mockImplementation(() => {
+			observed = [
+				parent.style.getPropertyValue('translate'),
+				parent.style.getPropertyPriority('translate')
+			];
+			return new DOMRect();
+		});
+
+		measureWithoutAncestorTransforms(child);
+
+		expect(observed).toEqual(['calc(var(--flip-x, 0px)) 0px 0px', 'important']);
+		expect(parent.style.getPropertyValue('translate')).toBe('');
 	});
 });

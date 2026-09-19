@@ -37,7 +37,13 @@ export const ensurePropertiesRegistered = (): void => {
 	}
 };
 
-const ELEMENTS_WITH_TRANSFORM = new WeakSet<Element>();
+/**
+ * Which transform properties we installed a template into, per element. A
+ * caller's own `translate` is left alone at wiring time and must also never be
+ * folded into (see `keyframes/fold`) — we would be animating a value we do not
+ * own.
+ */
+const ELEMENTS_WITH_TRANSFORM = new WeakMap<Element, Record<string, boolean>>();
 
 /**
  * Make sure the element's `translate` / `scale` / `rotate` styles are wired
@@ -45,12 +51,21 @@ const ELEMENTS_WITH_TRANSFORM = new WeakSet<Element>();
  */
 export const ensureTransformWired = (element: MotionElement): void => {
 	if (ELEMENTS_WITH_TRANSFORM.has(element)) return;
-	ELEMENTS_WITH_TRANSFORM.add(element);
 	const { style } = element;
-	style.translate ||= TRANSFORM_TEMPLATES.translate;
-	style.scale ||= TRANSFORM_TEMPLATES.scale;
-	style.rotate ||= TRANSFORM_TEMPLATES.rotate;
+	const owned: Record<string, boolean> = {
+		translate: !style.translate,
+		scale: !style.scale,
+		rotate: !style.rotate
+	};
+	ELEMENTS_WITH_TRANSFORM.set(element, owned);
+	if (owned.translate) style.translate = TRANSFORM_TEMPLATES.translate;
+	if (owned.scale) style.scale = TRANSFORM_TEMPLATES.scale;
+	if (owned.rotate) style.rotate = TRANSFORM_TEMPLATES.rotate;
 };
+
+/** True when the template on this transform property is ours to animate. */
+export const isTransformOwned = (element: Element, target: string): boolean =>
+	ELEMENTS_WITH_TRANSFORM.get(element)?.[target] === true;
 
 /**
  * Both halves of the setup an element needs before anything writes `--motion-*`
