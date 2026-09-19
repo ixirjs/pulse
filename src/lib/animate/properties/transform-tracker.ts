@@ -58,6 +58,15 @@ const forEachBit = (bits: number, fn: (i: number) => void): void => {
 	}
 };
 
+/**
+ * Can we write inline styles to this node? Duck-typed rather than an
+ * `instanceof HTMLElement` check: the capability is what we actually need, and
+ * it also holds for elements from another realm, such as an iframe, and under
+ * SSR, where those globals do not exist.
+ */
+const isMutableElement = (n: Element): n is MotionElement =>
+	typeof (n as Partial<MotionElement>).style?.setProperty === 'function';
+
 /** Mark that an element has started a WAAPI transform animation. */
 export const registerTransformAnimation = (element: Element, bits: number): void => {
 	let counts = activeTransformCounts.get(element);
@@ -106,9 +115,6 @@ export const deregisterTransformAnimation = (element: Element, bits: number): vo
  */
 type SavedProp = { name: string; saved: SavedStyleProp };
 type Suppressed = { node: MotionElement; props: SavedProp[] };
-
-const isMutableElement = (n: Element): n is MotionElement =>
-	n instanceof HTMLElement || n instanceof SVGElement;
 
 export const measureWithoutAncestorTransforms = (
 	el: Element,
