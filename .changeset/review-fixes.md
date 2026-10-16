@@ -17,3 +17,4 @@ Bug fixes from a performance / DX review:
 - `width` / `height` keyword endpoints (`'auto'`, `'fit-content'`, …) are now measured in the element's own `box-sizing` and ignore transforms. Before, a `content-box` element with padding or a border overshot to its border-box size, then snapped back when the keyword was restored.
 - `scroll()` measures progress from the element's resting layout box. Before, a driven transform (for example `y: [400, 0]`) moved the rect it measured, so progress drifted without any scrolling.
 - `flip({ easing })` now accepts `cubic-bezier(…)` strings. They used to fall back to `cubicOut` silently.
+- `animate()` now settles where the animation actually ended. `direction: 'reverse'`, an even number of `alternate` iterations, reverse playback and fractional iterations no longer jump to the last keyframe on finish, and `fill: 'none'` / `'backwards'` no longer leave the end state written inline.

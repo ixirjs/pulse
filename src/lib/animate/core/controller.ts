@@ -120,15 +120,31 @@ export const createController = ({
 	};
 
 	let finalized = false;
-	const finalize = (): void => {
+	/**
+	 * Settle on where the animation actually ended. `terminalProgress` is the
+	 * primary effect's progress at its end: `1` for a normal run, `0` (or a
+	 * fraction) after `reverse`, an even `alternate` count, a negative rate or
+	 * fractional iterations, and `null` when the fill doesn't hold the end state.
+	 */
+	const finalize = (terminalProgress: number | null): void => {
 		if (finalized) return;
 		finalized = true;
 		stopRaf();
-		// We don't call commitStyles() because the applyFinalStyles() call below
-		// writes the same end-state we'd commit (and avoids an extra forced style
-		// resolution per animation).
-		cancelAnimations();
-		applyFinalStyles(element, finalStyles, restorations);
+		if (terminalProgress === 1) {
+			// The common case: the end state is the last keyframe we already
+			// computed, so write it directly instead of resolving styles per
+			// animation (which commitStyles() would do).
+			cancelAnimations();
+			applyFinalStyles(element, finalStyles, restorations);
+		} else if (terminalProgress !== null && isBrowser()) {
+			// Ended somewhere else: freeze what is on screen, like stop().
+			demoteFoldedTransforms(element);
+			commitComputedStyles(element, finalStyles);
+			cancelAnimations();
+		} else {
+			// fill 'none' / 'backwards': back to the element's own styles.
+			cancelAnimations();
+		}
 		onTeardown?.();
 	};
 
@@ -144,12 +160,12 @@ export const createController = ({
 				// Capture the terminal timing before finalize() cancels the effects.
 				// This is 1 for a normal one-shot animation, but correctly preserves
 				// alternate/reverse iteration direction.
-				const terminalProgress = primaryAnimation?.effect?.getComputedTiming().progress ?? 1;
-				finalize();
+				const terminalProgress = primaryAnimation?.effect?.getComputedTiming().progress ?? null;
+				finalize(terminalProgress);
 				// The last rAF can run just before WAAPI reaches its terminal time.
 				// Publish the terminal sample explicitly so onUpdate has the same
 				// end-state guarantee as the animation controller itself.
-				defaults.onUpdate?.(terminalProgress, element);
+				defaults.onUpdate?.(terminalProgress ?? 1, element);
 				defaults.onEnd?.(element, { finished: true });
 			},
 			(err) => {

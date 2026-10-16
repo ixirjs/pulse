@@ -115,3 +115,24 @@ describe('animate() size keywords', () => {
 		ctrl.cancel();
 	});
 });
+
+describe('animate() terminal state', () => {
+	it('settles where a reversed run ends, not on the last keyframe', async () => {
+		const node = mount();
+		await animate(node, { opacity: [0, 1] }, { duration: 60, direction: 'reverse' }).finished;
+		expect(node.style.opacity).toBe('0');
+	});
+
+	it('settles at the start after an even number of alternating iterations', async () => {
+		const node = mount();
+		await animate(node, { x: [0, 100] }, { duration: 40, iterations: 2, direction: 'alternate' })
+			.finished;
+		expect(getComputedStyle(node).getPropertyValue('--motion-x').trim()).toBe('0px');
+	});
+
+	it("leaves no end state behind with fill: 'none'", async () => {
+		const node = mount();
+		await animate(node, { opacity: [0, 0.5] }, { duration: 60, fill: 'none' }).finished;
+		expect(node.style.opacity).toBe('');
+	});
+});
