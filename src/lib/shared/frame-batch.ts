@@ -8,8 +8,12 @@
  * The flush is two-phase: every callback runs first (the read phase), and any
  * function a callback returns runs after all of them (the write phase). A
  * subscriber that measures then animates should return its writes, so N
- * subscribers cost one layout instead of N forced reflows.
+ * subscribers cost one layout instead of N forced reflows. The read phase also
+ * runs as one measurement batch, so an animating ancestor shared by many
+ * measured elements is suppressed and restored once per frame, not per element.
  */
+
+import { batchMeasurements } from '../animate/properties/transform-tracker.js';
 
 /** Read-phase callback; may return the writes to apply once every read is done. */
 export type FrameBatchCallback = () => void | (() => void);
@@ -29,10 +33,12 @@ const flush = (): void => {
 	const callbacks = [...pending];
 	pending.clear();
 	const writes: Array<() => void> = [];
-	for (const callback of callbacks) {
-		const write = callback();
-		if (write) writes.push(write);
-	}
+	batchMeasurements(() => {
+		for (const callback of callbacks) {
+			const write = callback();
+			if (write) writes.push(write);
+		}
+	});
 	for (const write of writes) write();
 };
 

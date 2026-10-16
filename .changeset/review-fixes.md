@@ -19,3 +19,4 @@ Bug fixes from a performance / DX review:
 - `flip({ easing })` now accepts `cubic-bezier(…)` strings. They used to fall back to `cubicOut` silently.
 - `animate()` now settles where the animation actually ended. `direction: 'reverse'`, an even number of `alternate` iterations, reverse playback and fractional iterations no longer jump to the last keyframe on finish, and `fill: 'none'` / `'backwards'` no longer leave the end state written inline.
 - FLIP and `scroll()` attachments that share a frame now measure everything first and animate afterwards, so N attachments cost one layout per frame instead of N forced reflows.
+- Measurements in a shared frame now suppress an animating ancestor's transform once per frame instead of once per measured child (100 FLIP children under an animating parent: 1 write/restore instead of 100).
