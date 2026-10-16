@@ -39,12 +39,12 @@ export const isAutoKeyword = (value: AnimatableValue | undefined): value is stri
  * resolved pixel value so it can be used as a concrete keyframe endpoint.
  * The element's prior inline value is restored before returning.
  *
- * Measurement strategies:
- * 1. `width` / `height` — `getBoundingClientRect()` always resolves to px.
- * 2. Properties with `sizeDimension` (e.g. `max-width`, `min-height`) — try
- *    `getComputedStyle` first; fall back to the bounding rect if the browser
- *    preserves the keyword rather than resolving it.
- * 3. All others — `getComputedStyle` only, no bounding-rect fallback.
+ * `getComputedStyle` resolves sizes to the used px value in the element's own
+ * `box-sizing`, untouched by transforms — unlike `getBoundingClientRect()`,
+ * which is the transformed border box. Properties with `sizeDimension` (`width`,
+ * `max-width`, …) fall back to the rect only when the browser preserves the
+ * keyword instead of resolving it (e.g. `width: auto` on an inline element).
+ * All others fall back to `0px`.
  */
 export const measureKeywordValue = (
 	element: MotionElement,
@@ -58,17 +58,13 @@ export const measureKeywordValue = (
 	style.setProperty(def.css, keyword);
 
 	let measured: string;
-	if (def.css === 'width' || def.css === 'height') {
-		measured = `${element.getBoundingClientRect()[def.css]}px`;
+	const css = window.getComputedStyle(element).getPropertyValue(def.css).trim();
+	if (css && css !== keyword) {
+		measured = css;
+	} else if (def.sizeDimension) {
+		measured = `${element.getBoundingClientRect()[def.sizeDimension]}px`;
 	} else {
-		const css = window.getComputedStyle(element).getPropertyValue(def.css).trim();
-		if (css && css !== keyword) {
-			measured = css;
-		} else if (def.sizeDimension) {
-			measured = `${element.getBoundingClientRect()[def.sizeDimension]}px`;
-		} else {
-			measured = '0px';
-		}
+		measured = '0px';
 	}
 
 	restoreStyleProp(style, def.css, saved);

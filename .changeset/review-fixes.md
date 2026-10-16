@@ -14,3 +14,4 @@ Bug fixes from a performance / DX review:
 - The `svelte` peer range is now `^5.29.0`, the first release with attachments (`{@attach}`, `svelte/attachments`), which the public API depends on.
 - README: removed the `skewX` / `skewY` shorthands, which were never implemented (there is no individual CSS `skew` property to compose through), and listed the missing `z`.
 - Easing presets are annotated `/* @__PURE__ */`, so importing a single easing no longer pulls in every preset (`{ easeOut }`: 614 B → 353 B brotli).
+- `width` / `height` keyword endpoints (`'auto'`, `'fit-content'`, …) are now measured in the element's own `box-sizing` and ignore transforms. Before, a `content-box` element with padding or a border overshot to its border-box size, then snapped back when the keyword was restored.

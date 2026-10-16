@@ -101,3 +101,17 @@ describe('animate() teardown', () => {
 		expect(hasActiveTransforms(node)).toBe(false);
 	});
 });
+
+describe('animate() size keywords', () => {
+	it("resolves 'auto' in the element's box-sizing, not its border box", () => {
+		const parent = mount();
+		parent.style.width = '200px';
+		const child = document.createElement('div');
+		child.style.cssText = 'box-sizing:content-box;padding:10px;border:2px solid;';
+		parent.appendChild(child);
+		const ctrl = animate(child, { width: [50, 'auto'] }, { duration: 1000 });
+		const frames = ctrl.animations[0]!.effect!.getKeyframes();
+		expect(frames.at(-1)!.width).toBe('176px'); // 200 - 2×10 padding - 2×2 border
+		ctrl.cancel();
+	});
+});
