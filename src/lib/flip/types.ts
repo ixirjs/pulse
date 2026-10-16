@@ -32,7 +32,10 @@ export interface FlipOpacity {
 export interface FlipOptions {
 	/** Duration in ms, or a function of diagonal distance. */
 	duration?: FlipDuration;
-	/** Easing function or CSS easing string. Default: `cubicOut`. */
+	/**
+	 * Easing function, CSS keyword (`ease-out`, …) or `cubic-bezier(…)` string.
+	 * Other CSS strings (`steps()`, `linear(…)`) fall back to the default. Default: `cubicOut`.
+	 */
 	easing?: FlipEasing;
 	/** Animation delay in ms. */
 	delay?: number;
