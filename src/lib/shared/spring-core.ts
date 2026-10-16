@@ -105,7 +105,7 @@ const simulateSpring = (options: SpringOptions): SpringSamples => {
 	const target = 1;
 
 	let pos = 0;
-	let vel = velocity / 1000;
+	let vel = velocity; // progress / s — dtSec is already in seconds
 	const samples: number[] = [0];
 
 	let restingFrames = 0;

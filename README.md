@@ -234,6 +234,8 @@ const { samples, duration } = spring({ stiffness: 200, damping: 20 });
 | `restDelta` | `0.001` |
 | `restSpeed` | `0.001` |
 
+`velocity` is in progress per second over the normalized 0 → 1 travel: divide a px/s release velocity by the distance.
+
 ## `springEasing(options?)`
 
 Returns an `EasingFn` usable anywhere `easing` is accepted:
