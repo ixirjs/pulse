@@ -25,7 +25,7 @@
  * ```
  */
 
-import { isBrowser } from '../shared/browser.js';
+import { isBrowser, shouldReduceMotion } from '../shared/browser.js';
 import { frameTween } from '../shared/frame-tween.js';
 import { easeOut } from '../easing/index.js';
 import type { EasingFn } from '../shared/types.js';
@@ -46,6 +46,8 @@ export interface GradientOptions {
 	delay?: number;
 	/** CSS property to write. Default `'background-image'`. */
 	property?: string;
+	/** Honor `prefers-reduced-motion` (snap to target). Default true. */
+	respectReducedMotion?: boolean;
 	/** Called once when the tween settles. */
 	onComplete?: () => void;
 }
@@ -97,21 +99,24 @@ export const animateGradient = (
 		easing = easeOut,
 		delay = 0,
 		property = 'background-image',
+		respectReducedMotion,
 		onComplete
 	} = options;
 
 	if (!isBrowser()) return { finished: Promise.resolve(), cancel: () => {} };
 
-	const a = resolve(from);
-	const b = resolve(to);
 	const write = (value: string): void => element.style.setProperty(property, value);
-
-	// Mismatched stop counts can't be interpolated stop-for-stop: snap to target.
-	if (a.colors.length !== b.colors.length) {
+	const snap = (): GradientController => {
 		write(to);
 		onComplete?.();
 		return { finished: Promise.resolve(), cancel: () => {} };
-	}
+	};
+
+	if (shouldReduceMotion(respectReducedMotion)) return snap();
+	const a = resolve(from);
+	const b = resolve(to);
+	// Mismatched stop counts can't be interpolated stop-for-stop: snap to target.
+	if (a.colors.length !== b.colors.length) return snap();
 
 	const tween = frameTween({
 		duration,
