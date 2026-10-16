@@ -53,4 +53,12 @@ describe('parsePath()', () => {
 			{ code: 'Z', values: [] }
 		]);
 	});
+
+	it('stops at malformed input instead of looping forever', () => {
+		expect(parsePath('M0 0 Z 1')).toEqual([
+			{ code: 'M', values: [0, 0] },
+			{ code: 'Z', values: [] }
+		]);
+		expect(parsePath('M0 0 L?')).toEqual([{ code: 'M', values: [0, 0] }]);
+	});
 });
