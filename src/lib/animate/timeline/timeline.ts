@@ -34,6 +34,7 @@
  */
 
 import { animate } from '../core/animate.js';
+import { createController } from '../core/controller.js';
 import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from '../types.js';
 import { type Anchor, type TimelinePosition, resolvePosition } from './timeline-position.js';
 import {
@@ -42,7 +43,7 @@ import {
 	computeAnimateDuration,
 	offsetProps
 } from './timeline-internals.js';
-import { isBrowser } from '../../shared/browser.js';
+import { isBrowser, shouldReduceMotion } from '../../shared/browser.js';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -78,7 +79,11 @@ export interface Timeline {
 	 */
 	set(element: MotionElement, props: AnimateProps, position?: TimelinePosition): Timeline;
 
-	/** Fire a callback at the given position. */
+	/**
+	 * Fire a callback at the given position. Like `set()`, it follows the
+	 * timeline clock: pause / seek / playback rate apply, it is skipped when
+	 * reversed before being reached, and `finished` waits for it.
+	 */
 	call(callback: () => void, position?: TimelinePosition): Timeline;
 
 	/** Declare a named position for later reference. */
@@ -125,6 +130,7 @@ export interface Timeline {
 // ---------------------------------------------------------------------------
 
 const EMPTY_ANIMATIONS: readonly Animation[] = Object.freeze([]);
+const NOOP = (): void => {};
 
 export const timeline = (defaults: TimelineDefaults = {}): Timeline => {
 	const { paused = false, ...animateDefaults } = defaults;
@@ -135,7 +141,6 @@ export const timeline = (defaults: TimelineDefaults = {}): Timeline => {
 	// Materialization state.
 	let materialized = false;
 	const controllers: AnimationController[] = [];
-	let timeoutHandles: ReturnType<typeof setTimeout>[] = [];
 	let cachedAnimations: readonly Animation[] | undefined;
 	let cancelled = false;
 
@@ -161,11 +166,30 @@ export const timeline = (defaults: TimelineDefaults = {}): Timeline => {
 	// Materialization
 	// -------------------------------------------------------------------------
 
-	// Fire synchronously when startMs <= 0 (matches animate()'s reduced-motion
-	// fast-path), otherwise schedule via setTimeout and track the handle.
+	// Fire synchronously at time 0, or when reduced motion collapses every
+	// animate() entry to its end state. Otherwise ride an empty, target-less
+	// "marker" animation delayed to `startMs`: it lives in `controllers`, so
+	// pause / seek / reverse / playback rate / cancel and `finished` all reach
+	// it the same way they reach the real animations.
 	const scheduleAt = (startMs: number, fn: () => void): void => {
-		if (startMs <= 0) fn();
-		else timeoutHandles.push(setTimeout(fn, startMs));
+		if (startMs <= 0 || shouldReduceMotion(animateDefaults.respectReducedMotion)) {
+			fn();
+			return;
+		}
+		const marker = new Animation(new KeyframeEffect(null, null, { delay: startMs }));
+		const ctrl = createController({
+			element: document.documentElement,
+			animations: [marker],
+			defaults: {},
+			finalStyles: [],
+			restorations: []
+		});
+		marker.play();
+		// Played back to 0 (reversed before reaching it) or cancelled: don't fire.
+		ctrl.finished.then(() => {
+			if (ctrl.playbackRate > 0) fn();
+		}, NOOP);
+		controllers.push(ctrl);
 	};
 
 	const materialize = (): void => {
@@ -173,17 +197,18 @@ export const timeline = (defaults: TimelineDefaults = {}): Timeline => {
 		materialized = true;
 		if (!isBrowser()) return;
 
+		const animations: Animation[] = [];
 		for (const entry of entries) {
 			// Positioned after an infinitely looping entry: it would never be reached.
 			if (!Number.isFinite(entry.start)) continue;
 			if (entry.kind === 'animate') {
-				controllers.push(
-					animate(
-						entry.element,
-						offsetProps(entry.props, entry.options, entry.start),
-						entry.options
-					)
+				const ctrl = animate(
+					entry.element,
+					offsetProps(entry.props, entry.options, entry.start),
+					entry.options
 				);
+				controllers.push(ctrl);
+				animations.push(...ctrl.animations);
 			} else if (entry.kind === 'set') {
 				scheduleAt(entry.start, () => applySetEntry(entry));
 			} else {
@@ -197,7 +222,8 @@ export const timeline = (defaults: TimelineDefaults = {}): Timeline => {
 			}
 		}
 
-		cachedAnimations = controllers.flatMap((c) => c.animations);
+		// Real animations only — the call/set markers are an implementation detail.
+		cachedAnimations = animations;
 
 		// Apply any pre-materialization rate through the same controller setter the
 		// live setPlaybackRate() uses, so playback-rate changes have one code path.
@@ -313,15 +339,9 @@ export const timeline = (defaults: TimelineDefaults = {}): Timeline => {
 
 	const reverse: Timeline['reverse'] = () => materializeThen((c) => c.reverse());
 
-	const clearTimeouts = (): void => {
-		for (const h of timeoutHandles) clearTimeout(h);
-		timeoutHandles = [];
-	};
-
 	const shutdown = (op: (c: AnimationController) => void): void => {
 		cancelled = true;
 		forEachCtrl(op);
-		clearTimeouts();
 	};
 
 	const cancel: Timeline['cancel'] = () => shutdown((c) => c.cancel());
