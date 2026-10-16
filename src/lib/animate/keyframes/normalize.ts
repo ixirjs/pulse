@@ -65,7 +65,28 @@ const resolveDurationMs = (
 	return duration;
 };
 
-export const normalizeInput = (input: PropInput, defaults: AnimateDefaults): PropConfig => {
+/**
+ * Normalize a prop input into a `PropConfig`. Throws a `TypeError` naming
+ * `key` when the input has no target — `[]`, `[100]`, `{ values: [] }`, or a
+ * timing-only object like `{ duration: 200 }` — instead of emitting keyframes
+ * the browser silently ignores.
+ */
+export const normalizeInput = (
+	input: PropInput,
+	defaults: AnimateDefaults,
+	key = 'prop'
+): PropConfig => {
+	const config = toConfig(input, defaults);
+	const { to } = config;
+	if (to == null || (typeof to !== 'number' && typeof to !== 'string')) {
+		throw new TypeError(
+			`[animate] "${key}": expected a target value, a [from, to] pair, ≥2 keyframes, or { to } / { values }`
+		);
+	}
+	return config;
+};
+
+const toConfig = (input: PropInput, defaults: AnimateDefaults): PropConfig => {
 	const { duration, easing, spring, delay } = defaults;
 	if (Array.isArray(input)) {
 		return { ...tupleToConfig(input), duration, easing, spring, delay };

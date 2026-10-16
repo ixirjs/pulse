@@ -187,7 +187,7 @@ const applyEndStateImmediately = (
 	for (const key of Object.keys(props)) {
 		const def = resolveProp(key);
 		if (def.transform) needsTransform = true;
-		const { to } = normalizeInput(props[key]!, defaults);
+		const { to } = normalizeInput(props[key]!, defaults, key);
 		// `to` mirrors the last stop of a `values` sequence, so this lands on the
 		// correct end-state for multi-keyframe props too.
 		if (to != null) style.setProperty(def.css, formatValue(to, def));

@@ -135,7 +135,7 @@ export const buildKeyframes = (
 			transformBits |= VAR_BIT[def.css] ?? 0;
 		}
 
-		const config = normalizeInput(props[key]!, defaults);
+		const config = normalizeInput(props[key]!, defaults, key);
 		const timing = resolveTiming(config, element);
 
 		// Resolve the keyframe stops: a multi-stop `values` sequence, or the

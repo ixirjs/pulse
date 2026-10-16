@@ -64,7 +64,7 @@ export const computeAnimateDuration = (
 	const iterations = defaults.iterations ?? 1;
 	let max = 0;
 	for (const key of Object.keys(props)) {
-		const config = normalizeInput(props[key]!, defaults);
+		const config = normalizeInput(props[key]!, defaults, key);
 		const t = resolveTiming(config, element);
 		// `duration > 0` guard: 0 × Infinity would poison the max with NaN.
 		max = Math.max(max, t.delay + (t.duration > 0 ? t.duration * iterations : 0));
