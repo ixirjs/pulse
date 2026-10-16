@@ -8,3 +8,4 @@ Bug fixes from a performance / DX review:
 - `onUpdate` (animate), `frameTween` frames and `createSpringValue` listeners can now cancel/stop their animation from inside the callback; previously the rAF loop re-armed itself and ran forever.
 - Cancelling an `animate()` controller more than once, or after it finished, no longer releases a newer animation's transform ownership (which dropped its layer hint and confused FLIP measurement).
 - Shared-layout records (`createFlipScope`) for ids that never return are now evicted on the next write, so long-lived scopes over feeds or virtual lists no longer grow without bound.
+- `wheelable()` now releases its `will-change` layer hint when the attachment is removed mid-gesture.

@@ -167,6 +167,7 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 			unlisten();
 			detachSpring?.();
 			springScale?.stop();
+			releaseLayer();
 		};
 	};
 };

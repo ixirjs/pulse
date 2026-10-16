@@ -103,4 +103,12 @@ describe('wheelable()', () => {
 		await expect.poll(() => el.style.getPropertyValue('will-change'), { timeout: 3000 }).toBe('');
 		cleanup?.();
 	});
+
+	it('releases the compositor layer when removed mid-gesture', () => {
+		const el = mount();
+		const cleanup = wheelable({ speed: 0.01, endDelay: 1000 })(el);
+		el.dispatchEvent(wheel(-100));
+		cleanup?.();
+		expect(el.style.getPropertyValue('will-change')).toBe('');
+	});
 });
