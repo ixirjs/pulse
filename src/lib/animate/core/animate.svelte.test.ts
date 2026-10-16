@@ -5,6 +5,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import { animate } from './animate';
+import { hasActiveTransforms } from '../properties/transform-tracker';
 
 let el: HTMLElement | null = null;
 
@@ -85,5 +86,18 @@ describe('animate() onUpdate', () => {
 		);
 		await new Promise((r) => setTimeout(r, 80));
 		expect(calls).toBe(1);
+	});
+});
+
+describe('animate() teardown', () => {
+	it('releases transform ownership once, however often it is cancelled', () => {
+		const node = mount();
+		const first = animate(node, { x: [0, 100] }, { duration: 1000 });
+		const second = animate(node, { x: [0, 200] }, { duration: 1000 });
+		first.cancel();
+		first.cancel();
+		expect(hasActiveTransforms(node)).toBe(true);
+		second.cancel();
+		expect(hasActiveTransforms(node)).toBe(false);
 	});
 });

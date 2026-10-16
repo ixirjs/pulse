@@ -6,3 +6,4 @@ Bug fixes from a performance / DX review:
 
 - `parsePath` / `morph()` no longer hang on malformed path data (e.g. `M0 0 Z 1`, `M0 0 L?`); parsing stops at the first error, as SVG renderers do.
 - `onUpdate` (animate), `frameTween` frames and `createSpringValue` listeners can now cancel/stop their animation from inside the callback; previously the rAF loop re-armed itself and ran forever.
+- Cancelling an `animate()` controller more than once, or after it finished, no longer releases a newer animation's transform ownership (which dropped its layer hint and confused FLIP measurement).

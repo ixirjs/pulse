@@ -165,6 +165,11 @@ export const createController = ({
 	const teardown = (): void => {
 		stopRaf();
 		cancelAnimations();
+		// Shares finalize()'s guard: onTeardown releases per-element bookkeeping
+		// (transform ownership counts), so running it twice — cancel after finish,
+		// or cancel twice — would release a newer animation's share.
+		if (finalized) return;
+		finalized = true;
 		onTeardown?.();
 	};
 
