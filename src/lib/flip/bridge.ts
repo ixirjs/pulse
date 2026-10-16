@@ -7,7 +7,7 @@
  * or two, so anything older is stale by definition.
  */
 
-import type { FlipRect } from './types';
+import type { FlipRect } from './types.js';
 
 interface LayoutRecord {
 	rect: FlipRect;

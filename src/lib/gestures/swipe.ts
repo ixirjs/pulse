@@ -13,11 +13,11 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import { listen } from '../shared/listen';
-import { trackVelocity } from './velocity';
-import type { MotionElement } from '../animate';
-import { capture, lockTouchAction, release } from './pointer-capture';
+import { isBrowser } from '../shared/browser.js';
+import { listen } from '../shared/listen.js';
+import { trackVelocity } from './velocity.js';
+import type { MotionElement } from '../animate/index.js';
+import { capture, lockTouchAction, release } from './pointer-capture.js';
 
 export type SwipeAxis = 'x' | 'y' | 'both';
 export type SwipeDirection = 'left' | 'right' | 'up' | 'down';

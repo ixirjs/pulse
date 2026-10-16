@@ -19,9 +19,9 @@
  * ```
  */
 
-import { createController, noopController } from './controller';
-import { buildKeyframes, type KeyframeGroup } from '../keyframes/keyframes';
-import { normalizeInput } from '../keyframes/normalize';
+import { createController, noopController } from './controller.js';
+import { buildKeyframes, type KeyframeGroup } from '../keyframes/keyframes.js';
+import { normalizeInput } from '../keyframes/normalize.js';
 import {
 	demoteFoldedTransforms,
 	deregisterTransformAnimation,
@@ -29,17 +29,17 @@ import {
 	registerFoldedTransforms,
 	registerTransformAnimation,
 	type FoldedTransform
-} from '../properties/properties';
+} from '../properties/properties.js';
 import {
 	ensurePropertiesRegistered,
 	ensureTransformWired,
 	isTransformOwned,
 	wireTransform
-} from '../properties/transform-setup';
-import { applyFolds, planFolds } from '../keyframes/fold';
-import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from '../types';
-import { isBrowser, shouldReduceMotion } from '../../shared/browser';
-import { formatValue, resolveProp } from '../properties/prop-utils';
+} from '../properties/transform-setup.js';
+import { applyFolds, planFolds } from '../keyframes/fold.js';
+import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from '../types.js';
+import { isBrowser, shouldReduceMotion } from '../../shared/browser.js';
+import { formatValue, resolveProp } from '../properties/prop-utils.js';
 
 /**
  * Animate one or more properties on an element using the Web Animations API.

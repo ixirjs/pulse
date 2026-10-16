@@ -15,9 +15,9 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import { listen } from '../shared/listen';
-import type { MotionElement } from '../animate';
+import { isBrowser } from '../shared/browser.js';
+import { listen } from '../shared/listen.js';
+import type { MotionElement } from '../animate/index.js';
 
 export interface HoverableOptions {
 	onHoverStart?: (element: MotionElement, event: PointerEvent) => void;

@@ -8,8 +8,8 @@
  * teardown is always safe.
  */
 
-import { restoreStyleProp, saveStyleProp } from '../shared/inline-style';
-import type { MotionElement } from '../shared/types';
+import { restoreStyleProp, saveStyleProp } from '../shared/inline-style.js';
+import type { MotionElement } from '../shared/types.js';
 
 /** The axis a gesture owns; the browser keeps panning on the other one. */
 export type GestureAxis = 'x' | 'y' | 'both';

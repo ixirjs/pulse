@@ -17,8 +17,8 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import type { MotionElement } from '../animate';
+import { isBrowser } from '../shared/browser.js';
+import type { MotionElement } from '../animate/index.js';
 
 export interface InViewOptions {
 	/** Fired when the element crosses into view. */

@@ -1,5 +1,5 @@
-import type { EasingFn, SpringOptions } from '../shared/types';
-import { getCachedSpring, sampleAt } from '../shared/spring-core';
+import type { EasingFn, SpringOptions } from '../shared/types.js';
+import { getCachedSpring, sampleAt } from '../shared/spring-core.js';
 
 /**
  * A spring-physics easing function returned by `springEasing()`.

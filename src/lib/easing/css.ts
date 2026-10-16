@@ -1,6 +1,6 @@
-import type { EasingFn } from '../shared/types';
-import { cubicBezier } from './cubic-bezier';
-import { linear } from './primitive';
+import type { EasingFn } from '../shared/types.js';
+import { cubicBezier } from './cubic-bezier.js';
+import { linear } from './primitive.js';
 
 /**
  * Tag an easing with the CSS keyword it is exactly equivalent to, so

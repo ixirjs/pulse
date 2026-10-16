@@ -3,11 +3,11 @@
  * and own the lifecycle hooks (`onStart` / `onEnd`) plus inline-style cleanup.
  */
 
-import { isBrowser } from '../../shared/browser';
-import { demoteFoldedTransforms } from '../properties/properties';
-import { playbackControls } from '../../shared/playback';
-import type { AnimateDefaults, AnimationController, MotionElement } from '../types';
-import type { CssWrite } from '../keyframes/keyframes';
+import { isBrowser } from '../../shared/browser.js';
+import { demoteFoldedTransforms } from '../properties/properties.js';
+import { playbackControls } from '../../shared/playback.js';
+import type { AnimateDefaults, AnimationController, MotionElement } from '../types.js';
+import type { CssWrite } from '../keyframes/keyframes.js';
 
 const NOOP = (): void => {};
 const EMPTY_ANIMATIONS: readonly Animation[] = Object.freeze([]);

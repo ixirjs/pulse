@@ -4,9 +4,9 @@
  * browser integration in `controller.ts`.
  */
 
-import { springEasing } from '../easing';
-import { easingToCss } from '../animate/keyframes/easing-utils';
-import type { ViewTransitionOptions } from './types';
+import { springEasing } from '../easing/index.js';
+import { easingToCss } from '../animate/keyframes/easing-utils.js';
+import type { ViewTransitionOptions } from './types.js';
 
 /**
  * Resolve the timing options into an `EffectTiming` suitable for

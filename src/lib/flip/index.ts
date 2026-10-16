@@ -8,12 +8,12 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import type { AnimationController } from '../animate/types';
-import { animateFlip } from './animator';
-import { createFlipAttachment } from './attachment.svelte';
-import { createLayoutBridge } from './bridge';
-import { measure } from './geometry';
-import type { FlipOptions, FlipOptionsInput, FlipRect, FlipScope, MotionElement } from './types';
+import type { AnimationController } from '../animate/types.js';
+import { animateFlip } from './animator.js';
+import { createFlipAttachment } from './attachment.svelte.js';
+import { createLayoutBridge } from './bridge.js';
+import { measure } from './geometry.js';
+import type { FlipOptions, FlipOptionsInput, FlipRect, FlipScope, MotionElement } from './types.js';
 
 // ---------------------------------------------------------------------------
 // High-level API
@@ -73,22 +73,22 @@ export const createFlipScope = (): FlipScope => {
 	};
 };
 
-export { anchoredFlip } from './anchored';
+export { anchoredFlip } from './anchored.js';
 export type {
 	AnchoredFlipNodeFunction,
 	AnchoredFlipOptions,
 	AnchoredFlipReference,
 	AnchoredFlipReferenceGetter
-} from './anchored';
+} from './anchored.js';
 
 // ---------------------------------------------------------------------------
 // Low-level re-exports
 // ---------------------------------------------------------------------------
 
-export { createFlipSwitcher } from './switcher.svelte';
-export type { FlipSwitcher, FlipSwitchRole } from './switcher.svelte';
+export { createFlipSwitcher } from './switcher.svelte.js';
+export type { FlipSwitcher, FlipSwitchRole } from './switcher.svelte.js';
 
-export { animateFlip } from './animator';
-export { measure } from './geometry';
+export { animateFlip } from './animator.js';
+export { measure } from './geometry.js';
 
-export type * from './types';
+export type * from './types.js';

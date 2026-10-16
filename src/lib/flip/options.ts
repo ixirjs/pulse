@@ -3,10 +3,10 @@
  * animator. All helpers are pure — no DOM access, no side effects.
  */
 
-import { CSS_EASINGS } from '../easing';
-import type { EasingFn } from '../shared/types';
-import { DEFAULT_EASING } from '../animate/keyframes/easing-utils';
-import { FLIP_DEFAULT_DURATION, diagonal } from './geometry';
+import { CSS_EASINGS } from '../easing/index.js';
+import type { EasingFn } from '../shared/types.js';
+import { DEFAULT_EASING } from '../animate/keyframes/easing-utils.js';
+import { FLIP_DEFAULT_DURATION, diagonal } from './geometry.js';
 import type {
 	FlipDuration,
 	FlipEasing,
@@ -14,7 +14,7 @@ import type {
 	FlipOptions,
 	FlipOptionsInput,
 	FlipRectPair
-} from './types';
+} from './types.js';
 
 export const DEFAULT_DELAY = 0;
 

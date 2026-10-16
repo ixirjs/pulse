@@ -3,10 +3,10 @@
  * spring/easing engine, behind the uniform {@link AnimationController}.
  */
 
-import { isBrowser, shouldReduceMotion } from '../shared/browser';
-import type { AnimationController } from '../animate/types';
-import { createViewTransitionController, resolvedController } from './controller';
-import type { ViewTransitionOptions, ViewTransitionUpdate } from './types';
+import { isBrowser, shouldReduceMotion } from '../shared/browser.js';
+import type { AnimationController } from '../animate/types.js';
+import { createViewTransitionController, resolvedController } from './controller.js';
+import type { ViewTransitionOptions, ViewTransitionUpdate } from './types.js';
 
 /** True when the current document supports the View Transitions API. */
 export const supportsViewTransitions = (): boolean =>

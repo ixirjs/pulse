@@ -24,11 +24,11 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import { createFrameBatch } from '../shared/frame-batch';
-import { listen } from '../shared/listen';
-import type { AnimationController, MotionElement } from '../animate';
-import { coverProgress, containProgress, pageProgress } from './progress';
+import { isBrowser } from '../shared/browser.js';
+import { createFrameBatch } from '../shared/frame-batch.js';
+import { listen } from '../shared/listen.js';
+import type { AnimationController, MotionElement } from '../animate/index.js';
+import { coverProgress, containProgress, pageProgress } from './progress.js';
 
 export type ScrollAxis = 'x' | 'y';
 export type ScrollRange = 'cover' | 'contain' | 'page';

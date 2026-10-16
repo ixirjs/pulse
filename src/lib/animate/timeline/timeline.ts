@@ -33,16 +33,16 @@
  * ```
  */
 
-import { animate } from '../core/animate';
-import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from '../types';
-import { type Anchor, type TimelinePosition, resolvePosition } from './timeline-position';
+import { animate } from '../core/animate.js';
+import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from '../types.js';
+import { type Anchor, type TimelinePosition, resolvePosition } from './timeline-position.js';
 import {
 	type Entry,
 	type SetEntry,
 	computeAnimateDuration,
 	offsetProps
-} from './timeline-internals';
-import { isBrowser } from '../../shared/browser';
+} from './timeline-internals.js';
+import { isBrowser } from '../../shared/browser.js';
 
 // ---------------------------------------------------------------------------
 // Public types

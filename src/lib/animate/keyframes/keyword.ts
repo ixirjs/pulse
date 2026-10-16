@@ -9,10 +9,10 @@
  * element stays responsive to layout changes.
  */
 
-import type { PropDef } from '../properties/properties';
-import type { AnimatableValue, MotionElement } from '../types';
-import { isBrowser } from '../../shared/browser';
-import { restoreStyleProp, saveStyleProp } from '../../shared/inline-style';
+import type { PropDef } from '../properties/properties.js';
+import type { AnimatableValue, MotionElement } from '../types.js';
+import { isBrowser } from '../../shared/browser.js';
+import { restoreStyleProp, saveStyleProp } from '../../shared/inline-style.js';
 
 const AUTO_KEYWORDS = new Set([
 	'auto',

@@ -8,7 +8,7 @@
  * wrapper that builds the spans and is browser-only.
  */
 
-import { isBrowser } from '../shared/browser';
+import { isBrowser } from '../shared/browser.js';
 
 /** Which granularity / granularities to split into. Default: `'chars'`. */
 export type SplitType = 'chars' | 'words' | 'lines';

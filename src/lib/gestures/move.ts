@@ -18,13 +18,13 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import { listen } from '../shared/listen';
-import type { MotionElement } from '../animate';
-import type { SpringOptions } from '../shared/types';
-import { createSpringValue } from '../animate/spring-value';
-import { wireTransform } from '../animate/properties/transform-setup';
-import { hintTransformLayer } from '../animate/properties/properties';
+import { isBrowser } from '../shared/browser.js';
+import { listen } from '../shared/listen.js';
+import type { MotionElement } from '../animate/index.js';
+import type { SpringOptions } from '../shared/types.js';
+import { createSpringValue } from '../animate/spring-value.js';
+import { wireTransform } from '../animate/properties/transform-setup.js';
+import { hintTransformLayer } from '../animate/properties/properties.js';
 
 export interface MoveInfo {
 	/** Pointer position in client coordinates. */

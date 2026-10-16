@@ -6,7 +6,7 @@
  * / delay) — including spring sampling.
  */
 
-import { getCachedSpring } from '../../shared/spring-core';
+import { getCachedSpring } from '../../shared/spring-core.js';
 import type {
 	AnimatableValue,
 	AnimateDefaults,
@@ -16,9 +16,9 @@ import type {
 	PropInput,
 	SpringInput,
 	SpringOptions
-} from '../types';
-import { DEFAULT_DURATION, easingToCss } from './easing-utils';
-import { isSpringEasing } from '../../easing/spring';
+} from '../types.js';
+import { DEFAULT_DURATION, easingToCss } from './easing-utils.js';
+import { isSpringEasing } from '../../easing/spring.js';
 
 interface ResolvedTiming {
 	duration: number;

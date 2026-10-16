@@ -5,11 +5,11 @@
  * with a WeakMap cache so repeated issuance with the same function is free.
  */
 
-import type { EasingFn } from '../types';
-import { cubicOut } from '../../easing/primitive';
-import { cssKeywordOf } from '../../easing/css';
-import { isSpringEasing } from '../../easing/spring';
-import { samplesToLinearEasing } from '../../shared/spring-core';
+import type { EasingFn } from '../types.js';
+import { cubicOut } from '../../easing/primitive.js';
+import { cssKeywordOf } from '../../easing/css.js';
+import { isSpringEasing } from '../../easing/spring.js';
+import { samplesToLinearEasing } from '../../shared/spring-core.js';
 
 export const DEFAULT_DURATION = 300;
 /** Default easing — CSS `ease-out` cubic-bezier, shared with `cubicOut`. */

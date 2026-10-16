@@ -214,4 +214,4 @@ export {
 	hasActiveTransforms,
 	measureWithoutAncestorTransforms,
 	type FoldedTransform
-} from './transform-tracker';
+} from './transform-tracker.js';

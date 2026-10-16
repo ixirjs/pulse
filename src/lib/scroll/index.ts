@@ -6,8 +6,8 @@
  * - Pure progress math (`coverProgress`, `containProgress`, `pageProgress`).
  */
 
-export { scroll } from './scroll';
-export type { ScrollOptions, ScrollAxis, ScrollRange } from './scroll';
-export { inView } from './in-view';
-export type { InViewOptions } from './in-view';
-export { coverProgress, containProgress, pageProgress } from './progress';
+export { scroll } from './scroll.js';
+export type { ScrollOptions, ScrollAxis, ScrollRange } from './scroll.js';
+export { inView } from './in-view.js';
+export type { InViewOptions } from './in-view.js';
+export { coverProgress, containProgress, pageProgress } from './progress.js';

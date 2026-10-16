@@ -23,9 +23,9 @@
  * ```
  */
 
-import { isBrowser } from '../shared/browser';
-import { SPRING_DEFAULTS } from '../shared/spring-core';
-import type { SpringOptions } from '../shared/types';
+import { isBrowser } from '../shared/browser.js';
+import { SPRING_DEFAULTS } from '../shared/spring-core.js';
+import type { SpringOptions } from '../shared/types.js';
 
 /** Largest physics step (s) — clamps dt after a tab regains focus. */
 const MAX_DT = 1 / 30;

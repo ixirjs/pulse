@@ -9,15 +9,15 @@
 
 import { untrack } from 'svelte';
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import { createFrameBatch } from '../shared/frame-batch';
-import type { LayoutBridge } from './bridge';
-import { createDynamicAttrs } from './dynamic';
-import { createControllerSlot } from './controller-slot';
-import { carryVisualOffset, measure, measureVisual, rectsEqual } from './geometry';
-import { createObserverManager } from './observers';
-import { readOptions } from './options';
-import type { FlipOptions, FlipOptionsInput, FlipRect, MotionElement } from './types';
+import { isBrowser } from '../shared/browser.js';
+import { createFrameBatch } from '../shared/frame-batch.js';
+import type { LayoutBridge } from './bridge.js';
+import { createDynamicAttrs } from './dynamic.js';
+import { createControllerSlot } from './controller-slot.js';
+import { carryVisualOffset, measure, measureVisual, rectsEqual } from './geometry.js';
+import { createObserverManager } from './observers.js';
+import { readOptions } from './options.js';
+import type { FlipOptions, FlipOptionsInput, FlipRect, MotionElement } from './types.js';
 
 /**
  * Core FLIP attachment factory. Shared between the standalone `flip()`

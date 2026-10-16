@@ -17,9 +17,9 @@
  */
 
 import type { TransitionConfig } from 'svelte/transition';
-import { easeOut, springEasing } from '../easing';
-import { restoreStyleProp, saveStyleProp } from '../shared/inline-style';
-import type { EasingFn, SpringOptions } from '../shared/types';
+import { easeOut, springEasing } from '../easing/index.js';
+import { restoreStyleProp, saveStyleProp } from '../shared/inline-style.js';
+import type { EasingFn, SpringOptions } from '../shared/types.js';
 
 export interface PresenceParams {
 	/** Delay before the transition starts (ms). */

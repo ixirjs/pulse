@@ -25,17 +25,17 @@
  * ```
  */
 
-import { isBrowser } from '../shared/browser';
-import { frameTween } from '../shared/frame-tween';
-import { easeOut } from '../easing';
-import type { EasingFn } from '../shared/types';
+import { isBrowser } from '../shared/browser.js';
+import { frameTween } from '../shared/frame-tween.js';
+import { easeOut } from '../easing/index.js';
+import type { EasingFn } from '../shared/types.js';
 import {
 	formatInterpolatedLinearGradient,
 	parseLinearGradient,
 	parseRGBA,
 	resolvePositions,
 	type RGBA
-} from './parse';
+} from './parse.js';
 
 export interface GradientOptions {
 	/** Duration in ms. Default 400. */

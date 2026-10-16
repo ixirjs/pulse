@@ -6,7 +6,7 @@
  * This module has zero DOM dependencies and only imports from `shared/types`.
  */
 
-import type { SpringOptions } from './types';
+import type { SpringOptions } from './types.js';
 
 const DT_MS = 1000 / 60;
 const MAX_DURATION_MS = 10_000;

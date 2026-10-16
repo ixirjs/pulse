@@ -11,16 +11,16 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import { listen } from '../shared/listen';
-import { trackVelocity } from './velocity';
-import type { MotionElement } from '../animate';
-import type { SpringOptions } from '../shared/types';
-import { createSpringValue } from '../animate/spring-value';
-import { capture, lockTouchAction, release } from './pointer-capture';
-import { wireTransform } from '../animate/properties/transform-setup';
-import { hintTransformLayer } from '../animate/properties/properties';
-import { applyConstraint, xBounds, yBounds, type DragConstraints } from './constraints';
+import { isBrowser } from '../shared/browser.js';
+import { listen } from '../shared/listen.js';
+import { trackVelocity } from './velocity.js';
+import type { MotionElement } from '../animate/index.js';
+import type { SpringOptions } from '../shared/types.js';
+import { createSpringValue } from '../animate/spring-value.js';
+import { capture, lockTouchAction, release } from './pointer-capture.js';
+import { wireTransform } from '../animate/properties/transform-setup.js';
+import { hintTransformLayer } from '../animate/properties/properties.js';
+import { applyConstraint, xBounds, yBounds, type DragConstraints } from './constraints.js';
 
 export type DragAxis = 'x' | 'y' | 'both';
 

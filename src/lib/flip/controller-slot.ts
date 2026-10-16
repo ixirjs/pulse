@@ -8,10 +8,10 @@
  * cancel / wrap-onEnd / null-on-finish boilerplate.
  */
 
-import type { AnimationController } from '../animate/types';
-import { animateFlip } from './animator';
-import { resolveDuration } from './options';
-import type { FlipAnimateArgs } from './types';
+import type { AnimationController } from '../animate/types.js';
+import { animateFlip } from './animator.js';
+import { resolveDuration } from './options.js';
+import type { FlipAnimateArgs } from './types.js';
 
 /**
  * Floor for an interrupted run's shortened duration — below this a retarget

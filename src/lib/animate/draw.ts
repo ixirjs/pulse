@@ -18,10 +18,10 @@
  * ```
  */
 
-import { animate } from './core/animate';
-import { isBrowser } from '../shared/browser';
-import { noopController } from './core/controller';
-import type { AnimateDefaults, AnimationController } from './types';
+import { animate } from './core/animate.js';
+import { isBrowser } from '../shared/browser.js';
+import { noopController } from './core/controller.js';
+import type { AnimateDefaults, AnimationController } from './types.js';
 
 export interface DrawOptions extends AnimateDefaults {
 	/** Fraction of the path drawn at the start (`0` = hidden, `1` = full). Default 0. */

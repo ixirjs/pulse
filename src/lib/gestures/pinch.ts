@@ -11,13 +11,13 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import { listen } from '../shared/listen';
-import { applyConstraint, type AxisBounds } from './constraints';
-import type { MotionElement } from '../animate';
-import { capture, lockTouchAction, release } from './pointer-capture';
-import { wireTransform } from '../animate/properties/transform-setup';
-import { hintTransformLayer } from '../animate/properties/properties';
+import { isBrowser } from '../shared/browser.js';
+import { listen } from '../shared/listen.js';
+import { applyConstraint, type AxisBounds } from './constraints.js';
+import type { MotionElement } from '../animate/index.js';
+import { capture, lockTouchAction, release } from './pointer-capture.js';
+import { wireTransform } from '../animate/properties/transform-setup.js';
+import { hintTransformLayer } from '../animate/properties/properties.js';
 
 export interface PinchInfo {
 	/** Distance ratio of the two pointers relative to gesture start. */

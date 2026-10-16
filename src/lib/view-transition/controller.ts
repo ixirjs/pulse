@@ -11,10 +11,10 @@
  * controllable.
  */
 
-import type { AnimationController } from '../animate/types';
-import { playbackControls } from '../shared/playback';
-import { resolveViewTransitionTiming } from './timing';
-import type { ViewTransitionOptions } from './types';
+import type { AnimationController } from '../animate/types.js';
+import { playbackControls } from '../shared/playback.js';
+import { resolveViewTransitionTiming } from './timing.js';
+import type { ViewTransitionOptions } from './types.js';
 
 const NOOP = (): void => {};
 const EMPTY_ANIMATIONS: readonly Animation[] = Object.freeze([]);

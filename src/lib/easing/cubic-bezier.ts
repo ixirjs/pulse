@@ -1,5 +1,5 @@
-import type { EasingFn } from '../shared/types';
-import { linear } from './primitive';
+import type { EasingFn } from '../shared/types.js';
+import { linear } from './primitive.js';
 
 const NEWTON_ITERATIONS = 8;
 const NEWTON_MIN_SLOPE = 0.001;

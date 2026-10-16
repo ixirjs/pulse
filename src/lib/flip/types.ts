@@ -1,7 +1,7 @@
 import type { Attachment } from 'svelte/attachments';
 import type { ClassValue } from 'svelte/elements';
-import type { FlipRect, FlipRectPair } from './geometry';
-import type { EasingFn, MotionElement } from '../shared/types';
+import type { FlipRect, FlipRectPair } from './geometry.js';
+import type { EasingFn, MotionElement } from '../shared/types.js';
 
 // ---------------------------------------------------------------------------
 // Core geometry

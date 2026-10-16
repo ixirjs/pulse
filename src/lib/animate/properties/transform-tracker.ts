@@ -17,8 +17,8 @@
  * static registry data and the dynamic runtime state live in different modules.
  */
 
-import { restoreStyleProp, saveStyleProp, type SavedStyleProp } from '../../shared/inline-style';
-import type { MotionElement } from '../types';
+import { restoreStyleProp, saveStyleProp, type SavedStyleProp } from '../../shared/inline-style.js';
+import type { MotionElement } from '../types.js';
 
 /**
  * Identity values for every motion CSS custom property that drives a

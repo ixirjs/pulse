@@ -16,7 +16,7 @@
  * ```
  */
 
-export * from './primitive';
-export * from './cubic-bezier';
-export * from './css';
-export * from './spring';
+export * from './primitive.js';
+export * from './cubic-bezier.js';
+export * from './css.js';
+export * from './spring.js';
