@@ -27,6 +27,7 @@ import type { Attachment } from 'svelte/attachments';
 import { isBrowser } from '../shared/browser.js';
 import { createFrameBatch } from '../shared/frame-batch.js';
 import { listen } from '../shared/listen.js';
+import { measureWithoutAncestorTransforms } from '../animate/properties/transform-tracker.js';
 import type { AnimationController, MotionElement } from '../animate/index.js';
 import { coverProgress, containProgress, pageProgress } from './progress.js';
 
@@ -76,7 +77,10 @@ const readState = (
 	container: Element | null,
 	axis: ScrollAxis
 ): ScrollState => {
-	const rect = element.getBoundingClientRect();
+	// Resting layout box: the driven animation (or an animating ancestor) moves
+	// the visual rect, which would feed the animation's own output back into
+	// its progress and make it drift without any scroll.
+	const rect = measureWithoutAncestorTransforms(element);
 	if (container) {
 		const cRect = container.getBoundingClientRect();
 		return axis === 'y'
