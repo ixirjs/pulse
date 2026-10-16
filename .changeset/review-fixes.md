@@ -18,3 +18,4 @@ Bug fixes from a performance / DX review:
 - `scroll()` measures progress from the element's resting layout box. Before, a driven transform (for example `y: [400, 0]`) moved the rect it measured, so progress drifted without any scrolling.
 - `flip({ easing })` now accepts `cubic-bezier(…)` strings. They used to fall back to `cubicOut` silently.
 - `animate()` now settles where the animation actually ended. `direction: 'reverse'`, an even number of `alternate` iterations, reverse playback and fractional iterations no longer jump to the last keyframe on finish, and `fill: 'none'` / `'backwards'` no longer leave the end state written inline.
+- FLIP and `scroll()` attachments that share a frame now measure everything first and animate afterwards, so N attachments cost one layout per frame instead of N forced reflows.

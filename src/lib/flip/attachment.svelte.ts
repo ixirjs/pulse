@@ -41,9 +41,11 @@ export const createFlipAttachment = (
 		const run = (from: FlipRect, to: FlipRect): void => slot.run({ element, from, to, options });
 
 		// -----------------------------------------------------------------
-		// Reflow detection — re-measure and run if the element moved.
+		// Reflow detection — re-measure and run if the element moved. Split
+		// into a measure step that returns the animation to start, so a batched
+		// flush can measure every element before any of them animates.
 		// -----------------------------------------------------------------
-		const reflow = (): void => {
+		const measureReflow = (): (() => void) | undefined => {
 			if (!prevRect) return;
 			const next = measure(element);
 			// Count only cycles that would actually animate — observers deliver a
@@ -70,8 +72,9 @@ export const createFlipAttachment = (
 				? carryVisualOffset(prevRect, next, measureVisual(element))
 				: prevRect;
 			prevRect = next;
-			run(from, next);
+			return () => run(from, next);
 		};
+		const reflow = (): void => measureReflow()?.();
 
 		// The first scheduled pass after mount only re-baselines: layout is not
 		// settled when the attachment runs (siblings still mounting, fonts, images
@@ -84,7 +87,7 @@ export const createFlipAttachment = (
 				prevRect = measure(element);
 				return;
 			}
-			reflow();
+			return measureReflow();
 		});
 		const observers = createObserverManager();
 		const attrs = createDynamicAttrs(element);

@@ -140,14 +140,19 @@ export const scroll = (options: ScrollOptions = {}): Attachment<MotionElement> =
 		const duration = controller ? totalDuration(controller) : 0;
 		const scrollSource: EventTarget = container ?? window;
 
-		const update = (): void => {
+		// Measure, then return the writes: in a shared flush every attachment
+		// reads its geometry before any of them seeks or runs onProgress.
+		const measureProgress = (): (() => void) => {
 			const progress = progressFor(range, readState(element, container, axis));
-			controller?.seek(progress * duration);
-			onProgress?.(progress, element);
+			return () => {
+				controller?.seek(progress * duration);
+				onProgress?.(progress, element);
+			};
 		};
+		const update = (): void => measureProgress()();
 		// Scroll attachments remain independently owned, but their geometry work
 		// shares one rAF when several receive the same scroll/resize burst.
-		const batch = createFrameBatch(update);
+		const batch = createFrameBatch(measureProgress);
 
 		update();
 		const unlistenScroll = listen(scrollSource, { scroll: batch.schedule }, { passive: true });
