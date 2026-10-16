@@ -4,5 +4,5 @@
  * `stagger()` for staggered reveals). The GSAP-SplitText analog.
  */
 
-export { splitText, tokenizeWords, tokenizeChars } from './split';
-export type { SplitType, SplitTextOptions, SplitTextResult } from './split';
+export { splitText, tokenizeWords, tokenizeChars } from './split.js';
+export type { SplitType, SplitTextOptions, SplitTextResult } from './split.js';

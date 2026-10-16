@@ -25,10 +25,10 @@
  * ```
  */
 
-import { isBrowser, shouldReduceMotion } from '../shared/browser';
-import { frameTween } from '../shared/frame-tween';
-import { easeOut } from '../easing';
-import type { EasingFn } from './types';
+import { isBrowser, shouldReduceMotion } from '../shared/browser.js';
+import { frameTween } from '../shared/frame-tween.js';
+import { easeOut } from '../easing/index.js';
+import type { EasingFn } from './types.js';
 
 /** Default tween duration in ms when none is supplied. */
 const DEFAULT_DURATION = 300;

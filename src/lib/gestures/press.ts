@@ -23,10 +23,10 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import { listen } from '../shared/listen';
-import type { MotionElement } from '../animate';
-import { capture, release } from './pointer-capture';
+import { isBrowser } from '../shared/browser.js';
+import { listen } from '../shared/listen.js';
+import type { MotionElement } from '../animate/index.js';
+import { capture, release } from './pointer-capture.js';
 
 export interface PressableOptions {
 	/** Pointer went down on the element. */

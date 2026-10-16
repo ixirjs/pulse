@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { animate } from '../core/animate';
 import {
+	batchMeasurements,
 	deregisterTransformAnimation,
 	measureWithoutAncestorTransforms,
 	registerFoldedTransforms,
@@ -116,5 +118,59 @@ describe('folded transforms', () => {
 
 		expect(observed).toEqual(['calc(var(--flip-x, 0px)) 0px 0px', 'important']);
 		expect(parent.style.getPropertyValue('translate')).toBe('');
+	});
+});
+
+describe('batchMeasurements()', () => {
+	const mountTree = (): { parent: HTMLElement; children: HTMLElement[] } => {
+		const parent = document.createElement('div');
+		parent.style.cssText = 'position:absolute;top:0;left:0;width:300px';
+		const children = [0, 1, 2].map(() => {
+			const c = document.createElement('div');
+			c.style.height = '20px';
+			return parent.appendChild(c);
+		});
+		document.body.appendChild(parent);
+		mounted.push(parent);
+		return { parent, children };
+	};
+	const paused = (el: HTMLElement, x: [number, number]) => {
+		const ctrl = animate(el, { x }, { duration: 1000, easing: (t) => t });
+		ctrl.pause();
+		ctrl.seek(500);
+		return ctrl;
+	};
+
+	it('suppresses a shared animating ancestor once, with identical rects', () => {
+		const { parent, children } = mountTree();
+		const ctrl = paused(parent, [0, 100]);
+		const before = parent.getAttribute('style');
+		const expected = children.map((c) => measureWithoutAncestorTransforms(c));
+
+		const writes = vi.spyOn(parent.style, 'setProperty');
+		measureWithoutAncestorTransforms(children[0]!);
+		const perMeasure = writes.mock.calls.length;
+		writes.mockClear();
+
+		const rects = batchMeasurements(() => children.map((c) => measureWithoutAncestorTransforms(c)));
+		expect(perMeasure).toBeGreaterThan(0);
+		expect(writes.mock.calls.length).toBe(perMeasure); // once, not once per child
+		expect(rects).toEqual(expected);
+		expect(parent.getAttribute('style')).toBe(before);
+		ctrl.cancel();
+	});
+
+	it('lifts an already-suppressed element for a visual read', () => {
+		const { children } = mountTree();
+		const child = children[1]!;
+		const ctrl = paused(child, [0, 100]);
+		const visual = measureWithoutAncestorTransforms(child, { suppressSelf: false });
+		const [rest, live] = batchMeasurements(() => [
+			measureWithoutAncestorTransforms(child),
+			measureWithoutAncestorTransforms(child, { suppressSelf: false })
+		]);
+		expect(live!.x - rest!.x).toBeCloseTo(50, 0);
+		expect(live).toEqual(visual);
+		ctrl.cancel();
 	});
 });

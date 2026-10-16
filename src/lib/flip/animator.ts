@@ -16,14 +16,14 @@
  * the same controller so a single `cancel()` aborts the whole effect.
  */
 
-import { animate } from '../animate/core/animate';
-import type { AnimationController, MotionElement } from '../animate/types';
-import { buildFlipProps, isIdentityDelta, rectsEqual, resolveFlipDelta } from './geometry';
-import type { FlipDelta } from './geometry';
-import { isBrowser, shouldReduceMotion } from '../shared/browser';
-import { restoreStyleProp, saveStyleProp } from '../shared/inline-style';
-import { DEFAULT_DELAY, resolveDuration, resolveEasing, resolveOpacity } from './options';
-import type { FlipAnimateArgs } from './types';
+import { animate } from '../animate/core/animate.js';
+import type { AnimationController, MotionElement } from '../animate/types.js';
+import { buildFlipProps, isIdentityDelta, rectsEqual, resolveFlipDelta } from './geometry.js';
+import type { FlipDelta } from './geometry.js';
+import { isBrowser, shouldReduceMotion } from '../shared/browser.js';
+import { restoreStyleProp, saveStyleProp } from '../shared/inline-style.js';
+import { DEFAULT_DELAY, resolveDuration, resolveEasing, resolveOpacity } from './options.js';
+import type { FlipAnimateArgs } from './types.js';
 
 /**
  * Parse a CSS `transform-origin` computed value (always in `px` in computed

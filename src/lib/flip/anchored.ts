@@ -1,10 +1,10 @@
-import type { AnimationController } from '../animate/types';
-import { saveStyleProp, restoreStyleProp, type SavedStyleProp } from '../shared/inline-style';
-import { isBrowser } from '../shared/browser';
-import { animateFlip } from './animator';
-import { measure } from './geometry';
-import { resolveOpacity } from './options';
-import type { FlipOptions, FlipRect, MotionElement } from './types';
+import type { AnimationController } from '../animate/types.js';
+import { saveStyleProp, restoreStyleProp, type SavedStyleProp } from '../shared/inline-style.js';
+import { isBrowser } from '../shared/browser.js';
+import { animateFlip } from './animator.js';
+import { measure } from './geometry.js';
+import { resolveOpacity } from './options.js';
+import type { FlipOptions, FlipRect, MotionElement } from './types.js';
 
 const FLIP_STYLE_PROPERTIES = ['--flip-x', '--flip-y', '--flip-scale-x', '--flip-scale-y'] as const;
 const OWNED_STYLE_PROPERTIES = [...FLIP_STYLE_PROPERTIES, 'opacity', 'pointer-events'] as const;

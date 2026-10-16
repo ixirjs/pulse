@@ -6,7 +6,7 @@
  * This module has zero DOM dependencies and only imports from `shared/types`.
  */
 
-import type { SpringOptions } from './types';
+import type { SpringOptions } from './types.js';
 
 const DT_MS = 1000 / 60;
 const MAX_DURATION_MS = 10_000;
@@ -105,7 +105,7 @@ const simulateSpring = (options: SpringOptions): SpringSamples => {
 	const target = 1;
 
 	let pos = 0;
-	let vel = velocity / 1000;
+	let vel = velocity; // progress / s — dtSec is already in seconds
 	const samples: number[] = [0];
 
 	let restingFrames = 0;

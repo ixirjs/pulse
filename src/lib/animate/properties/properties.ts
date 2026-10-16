@@ -100,8 +100,8 @@ export const PROPERTY_REGISTRY: Readonly<Record<string, PropDef>> = {
 
 	// Common CSS shorthands with sensible default units.
 	opacity: { css: 'opacity', unit: '', initial: '1' },
-	width: { css: 'width', unit: 'px', initial: 'auto', measurable: true },
-	height: { css: 'height', unit: 'px', initial: 'auto', measurable: true },
+	width: { css: 'width', unit: 'px', initial: 'auto', measurable: true, sizeDimension: 'width' },
+	height: { css: 'height', unit: 'px', initial: 'auto', measurable: true, sizeDimension: 'height' },
 	top: { css: 'top', unit: 'px', initial: 'auto', measurable: true },
 	left: { css: 'left', unit: 'px', initial: 'auto', measurable: true },
 	right: { css: 'right', unit: 'px', initial: 'auto', measurable: true },
@@ -214,4 +214,4 @@ export {
 	hasActiveTransforms,
 	measureWithoutAncestorTransforms,
 	type FoldedTransform
-} from './transform-tracker';
+} from './transform-tracker.js';

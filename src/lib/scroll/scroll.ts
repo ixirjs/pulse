@@ -24,11 +24,12 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import { createFrameBatch } from '../shared/frame-batch';
-import { listen } from '../shared/listen';
-import type { AnimationController, MotionElement } from '../animate';
-import { coverProgress, containProgress, pageProgress } from './progress';
+import { isBrowser } from '../shared/browser.js';
+import { createFrameBatch } from '../shared/frame-batch.js';
+import { listen } from '../shared/listen.js';
+import { measureWithoutAncestorTransforms } from '../animate/properties/transform-tracker.js';
+import type { AnimationController, MotionElement } from '../animate/index.js';
+import { coverProgress, containProgress, pageProgress } from './progress.js';
 
 export type ScrollAxis = 'x' | 'y';
 export type ScrollRange = 'cover' | 'contain' | 'page';
@@ -76,7 +77,10 @@ const readState = (
 	container: Element | null,
 	axis: ScrollAxis
 ): ScrollState => {
-	const rect = element.getBoundingClientRect();
+	// Resting layout box: the driven animation (or an animating ancestor) moves
+	// the visual rect, which would feed the animation's own output back into
+	// its progress and make it drift without any scroll.
+	const rect = measureWithoutAncestorTransforms(element);
 	if (container) {
 		const cRect = container.getBoundingClientRect();
 		return axis === 'y'
@@ -136,14 +140,19 @@ export const scroll = (options: ScrollOptions = {}): Attachment<MotionElement> =
 		const duration = controller ? totalDuration(controller) : 0;
 		const scrollSource: EventTarget = container ?? window;
 
-		const update = (): void => {
+		// Measure, then return the writes: in a shared flush every attachment
+		// reads its geometry before any of them seeks or runs onProgress.
+		const measureProgress = (): (() => void) => {
 			const progress = progressFor(range, readState(element, container, axis));
-			controller?.seek(progress * duration);
-			onProgress?.(progress, element);
+			return () => {
+				controller?.seek(progress * duration);
+				onProgress?.(progress, element);
+			};
 		};
+		const update = (): void => measureProgress()();
 		// Scroll attachments remain independently owned, but their geometry work
 		// shares one rAF when several receive the same scroll/resize burst.
-		const batch = createFrameBatch(update);
+		const batch = createFrameBatch(measureProgress);
 
 		update();
 		const unlistenScroll = listen(scrollSource, { scroll: batch.schedule }, { passive: true });

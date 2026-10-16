@@ -6,7 +6,7 @@
  *
  * @example
  * ```ts
- * import { animate, stagger } from './index';
+ * import { animate, stagger } from './index.js';
  *
  * const delay = stagger(50);
  * items.forEach((el, i) => {
@@ -28,8 +28,8 @@
  * ```
  */
 
-import { clamp01 } from '../shared/math';
-import type { EasingFn } from './types';
+import { clamp01 } from '../shared/math.js';
+import type { EasingFn } from './types.js';
 
 export interface StaggerOptions {
 	/**

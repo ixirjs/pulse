@@ -5,9 +5,9 @@
  * converts JS values to CSS strings, and reads live computed values from the DOM.
  */
 
-import type { AnimatableValue, MotionElement } from '../types';
-import { PROPERTY_REGISTRY, type PropDef } from './properties';
-import { isBrowser } from '../../shared/browser';
+import type { AnimatableValue, MotionElement } from '../types.js';
+import { PROPERTY_REGISTRY, type PropDef } from './properties.js';
+import { isBrowser } from '../../shared/browser.js';
 
 /**
  * Convert a possibly-numeric value to its CSS string form, applying the

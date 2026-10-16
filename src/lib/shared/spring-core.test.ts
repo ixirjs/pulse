@@ -154,6 +154,13 @@ describe('spring()', () => {
 		expect(tight.duration).toBeGreaterThanOrEqual(loose.duration);
 	});
 
+	it('treats velocity as progress / second, matching the live spring', () => {
+		// One semi-implicit Euler step at 60fps from rest at 0 toward 1.
+		const dt = 1 / 60;
+		const v1 = 10 + (170 * 1 - 26 * 10) * dt;
+		expect(spring({ velocity: 10 }).samples[1]).toBeCloseTo(v1 * dt, 6);
+	});
+
 	it('all samples are finite numbers', () => {
 		const { samples } = spring({ stiffness: 300, damping: 18, velocity: 200 });
 		for (const s of samples) {

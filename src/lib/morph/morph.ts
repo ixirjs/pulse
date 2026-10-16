@@ -15,11 +15,11 @@
  * ```
  */
 
-import { isBrowser, shouldReduceMotion } from '../shared/browser';
-import { frameTween } from '../shared/frame-tween';
-import { easeOut } from '../easing';
-import type { EasingFn } from '../shared/types';
-import { interpolatePlan, planMorph } from './interpolate';
+import { isBrowser, shouldReduceMotion } from '../shared/browser.js';
+import { frameTween } from '../shared/frame-tween.js';
+import { easeOut } from '../easing/index.js';
+import type { EasingFn } from '../shared/types.js';
+import { interpolatePlan, planMorph } from './interpolate.js';
 
 export interface MorphOptions {
 	/** Duration in ms. Default 400. */

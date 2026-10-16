@@ -3,8 +3,8 @@
  * Runs in the `client` project.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
-import { fly, scale, size } from './transitions';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fade, fly, scale, size } from './transitions';
 
 let node: HTMLElement | null = null;
 
@@ -149,5 +149,17 @@ describe('scale() with width/height', () => {
 		const at0 = scale(el, { start: 0.9, width: 0 }).css!(0, 1);
 		expect(at0).toContain('transform: scale(0.9)');
 		expect(at0).toContain('width: 0px');
+	});
+});
+
+describe('reduced motion', () => {
+	it('skips the delay and tween when the user prefers reduced motion', () => {
+		vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
+		const node = document.createElement('div');
+		expect(fade(node, { delay: 100, duration: 300 })).toMatchObject({ delay: 0, duration: 0 });
+		expect(fade(node, { duration: 300, respectReducedMotion: false })).toMatchObject({
+			duration: 300
+		});
+		vi.restoreAllMocks();
 	});
 });

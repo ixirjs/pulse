@@ -12,8 +12,13 @@ import type {
 	AnimateProps,
 	MotionElement,
 	PropInput
-} from '../types';
-import { isPropConfig, normalizeInput, resolveTiming, tupleToConfig } from '../keyframes/normalize';
+} from '../types.js';
+import {
+	isPropConfig,
+	normalizeInput,
+	resolveTiming,
+	tupleToConfig
+} from '../keyframes/normalize.js';
 
 // ---------------------------------------------------------------------------
 // Entry shapes
@@ -51,7 +56,7 @@ export type Entry = AnimateEntry | SetEntry | CallEntry;
 
 /**
  * Compute the total time an `animate()` call will occupy — the largest
- * `(delay + duration)` across its props. Spring durations are auto-sized
+ * `(delay + duration × iterations)` across its props. Spring durations are auto-sized
  * via the same `resolveTiming()` the runtime uses, so the value is exact.
  */
 export const computeAnimateDuration = (
@@ -59,11 +64,15 @@ export const computeAnimateDuration = (
 	props: AnimateProps,
 	defaults: AnimateDefaults
 ): number => {
+	// Every prop shares the effect-level iteration count; `Infinity` propagates,
+	// so a looping entry pushes later relative positions out to infinity too.
+	const iterations = defaults.iterations ?? 1;
 	let max = 0;
 	for (const key of Object.keys(props)) {
-		const config = normalizeInput(props[key]!, defaults);
+		const config = normalizeInput(props[key]!, defaults, key);
 		const t = resolveTiming(config, element);
-		max = Math.max(max, t.duration + t.delay);
+		// `duration > 0` guard: 0 × Infinity would poison the max with NaN.
+		max = Math.max(max, t.delay + (t.duration > 0 ? t.duration * iterations : 0));
 	}
 	return max;
 };

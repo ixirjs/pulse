@@ -17,8 +17,8 @@
  * static registry data and the dynamic runtime state live in different modules.
  */
 
-import { restoreStyleProp, saveStyleProp, type SavedStyleProp } from '../../shared/inline-style';
-import type { MotionElement } from '../types';
+import { restoreStyleProp, saveStyleProp, type SavedStyleProp } from '../../shared/inline-style.js';
+import type { MotionElement } from '../types.js';
 
 /**
  * Identity values for every motion CSS custom property that drives a
@@ -256,6 +256,41 @@ export const demoteFoldedTransforms = (element: Element): void => {
 	}
 };
 
+type SavedProp = { name: string; value: string; saved: SavedStyleProp };
+
+/**
+ * Open measurement batch: each suppressed node and the props it overrode. While
+ * set, suppression is shared across measurements and restored once at the end,
+ * so measuring N children of an animating parent writes the parent once, not N
+ * times. See {@link batchMeasurements}.
+ */
+let batch: Map<MotionElement, SavedProp[]> | null = null;
+
+/** Neutralise `target`'s active motion transform; returns what to restore. */
+const suppressNode = (target: MotionElement): SavedProp[] | undefined => {
+	const bits = activeTransformBits.get(target);
+	if (!bits) return;
+	const props: SavedProp[] = [];
+	const override = (name: string, value: string): void => {
+		props.push({ name, value, saved: saveStyleProp(target.style, name) });
+		target.style.setProperty(name, value, 'important');
+	};
+	forEachBit(bits, (i) => override(...MOTION_TRANSFORM_IDENTITIES[i]!));
+	// A folded animation drives `translate`/`scale`/`rotate` itself, so
+	// forcing the vars to identity no longer reaches it. Reinstating the
+	// template with `!important` does: the template reads the vars we just
+	// neutralised, so the element measures at rest exactly as on the
+	// variable path.
+	for (const { targets } of foldedTransforms.get(target) ?? []) {
+		for (const [name, template] of targets) override(name, template);
+	}
+	return props.length > 0 ? props : undefined;
+};
+
+const restoreProps = (node: MotionElement, props: SavedProp[]): void => {
+	for (const { name, saved } of props) restoreStyleProp(node.style, name, saved);
+};
+
 /**
  * Like `element.getBoundingClientRect()` but walks up the ancestor chain
  * and temporarily suppresses the motion CSS vars on every ancestor that
@@ -264,7 +299,8 @@ export const demoteFoldedTransforms = (element: Element): void => {
  * Setting the vars with `!important` beats the WAAPI animation layer in the
  * CSS cascade, so the measurement reflects the element's "at rest" position
  * even when a parent is mid-scale/translate. All inline style changes are
- * fully restored before returning — no repaint ever sees the intermediate state.
+ * fully restored before returning — no repaint ever sees the intermediate state
+ * (inside {@link batchMeasurements}, when the batch closes).
  *
  * By default the element's own in-flight transform is suppressed too, so the
  * rect reflects its resting layout box. Pass `suppressSelf: false` to keep the
@@ -272,55 +308,62 @@ export const demoteFoldedTransforms = (element: Element): void => {
  * interrupting an in-flight FLIP so the next run can start where the element is
  * actually on-screen instead of snapping to its resting box first.
  */
-type SavedProp = { name: string; saved: SavedStyleProp };
-type Suppressed = { node: MotionElement; props: SavedProp[] };
-
 export const measureWithoutAncestorTransforms = (
 	el: Element,
 	{ suppressSelf = true }: { suppressSelf?: boolean } = {}
 ): DOMRect => {
-	const suppressed: Suppressed[] = [];
-
-	const suppressNode = (target: MotionElement): void => {
-		const bits = activeTransformBits.get(target);
-		if (!bits) return;
-		const props: SavedProp[] = [];
-		forEachBit(bits, (i) => {
-			const [name, identity] = MOTION_TRANSFORM_IDENTITIES[i]!;
-			props.push({ name, saved: saveStyleProp(target.style, name) });
-			target.style.setProperty(name, identity, 'important');
-		});
-		// A folded animation drives `translate`/`scale`/`rotate` itself, so
-		// forcing the vars to identity no longer reaches it. Reinstating the
-		// template with `!important` does: the template reads the vars we just
-		// neutralised, so the element measures at rest exactly as on the
-		// variable path.
-		for (const { targets } of foldedTransforms.get(target) ?? []) {
-			for (const [name, template] of targets) {
-				props.push({ name, saved: saveStyleProp(target.style, name) });
-				target.style.setProperty(name, template, 'important');
-			}
-		}
-		if (props.length > 0) suppressed.push({ node: target, props });
+	const local: Array<[MotionElement, SavedProp[]]> = [];
+	const suppress = (node: MotionElement): void => {
+		if (batch?.has(node)) return;
+		const props = suppressNode(node);
+		if (!props) return;
+		if (batch) batch.set(node, props);
+		else local.push([node, props]);
 	};
+
+	// In a batch the element may already be suppressed — as an earlier
+	// measurement's subject or ancestor. A visual read needs its own transform
+	// back, so lift that suppression for the duration of this read.
+	const lifted = !suppressSelf && isMutableElement(el) ? batch?.get(el) : undefined;
+	if (lifted) restoreProps(el as MotionElement, lifted);
 
 	// Suppress the element itself first so getBoundingClientRect() reflects the
 	// resting position even when the element is mid-animation (e.g. during the
 	// backward-fill phase of a delayed FLIP animation). Skipped when the caller
 	// wants the element's live visual rect (transform included).
-	if (suppressSelf && isMutableElement(el)) suppressNode(el);
+	if (suppressSelf && isMutableElement(el)) suppress(el);
 
 	let node: Element | null = el.parentElement;
 	while (node) {
-		if (isMutableElement(node)) suppressNode(node);
+		if (isMutableElement(node)) suppress(node);
 		node = node.parentElement;
 	}
 
 	const rect = el.getBoundingClientRect();
 
-	for (const { node, props } of suppressed) {
-		for (const { name, saved } of props) restoreStyleProp(node.style, name, saved);
+	for (const [n, props] of local) restoreProps(n, props);
+	if (lifted) {
+		for (const { name, value } of lifted)
+			(el as MotionElement).style.setProperty(name, value, 'important');
 	}
 
 	return rect;
+};
+
+/**
+ * Run `fn` with measurement suppression shared across every
+ * {@link measureWithoutAncestorTransforms} call inside it, restoring all
+ * overridden styles once when it returns. `fn` must only read: an animation
+ * started inside would see the suppressed styles. Nested calls join the outer
+ * batch.
+ */
+export const batchMeasurements = <T>(fn: () => T): T => {
+	if (batch) return fn();
+	const open = (batch = new Map());
+	try {
+		return fn();
+	} finally {
+		batch = null;
+		for (const [n, props] of open) restoreProps(n, props);
+	}
 };

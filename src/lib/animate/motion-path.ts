@@ -18,8 +18,8 @@
  * ```
  */
 
-import { animate } from './core/animate';
-import type { AnimateDefaults, AnimationController, MotionElement } from './types';
+import { animate } from './core/animate.js';
+import type { AnimateDefaults, AnimationController, MotionElement } from './types.js';
 
 export interface MotionPathOptions extends AnimateDefaults {
 	/** Start position along the path. Number → percent (`0` = path start). Default 0. */

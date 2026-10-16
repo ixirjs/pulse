@@ -23,9 +23,9 @@
  * ```
  */
 
-import { isBrowser } from '../shared/browser';
-import { SPRING_DEFAULTS } from '../shared/spring-core';
-import type { SpringOptions } from '../shared/types';
+import { isBrowser } from '../shared/browser.js';
+import { SPRING_DEFAULTS } from '../shared/spring-core.js';
+import type { SpringOptions } from '../shared/types.js';
 
 /** Largest physics step (s) — clamps dt after a tab regains focus. */
 const MAX_DT = 1 / 30;
@@ -106,6 +106,7 @@ export const createSpringValue = (options: SpringValueOptions = {}): SpringValue
 		Math.abs(target - value) < restDelta && Math.abs(velocity) < restSpeed;
 
 	const tick = (now: number): void => {
+		const self = frame;
 		// dt in seconds, clamped so a long pause can't explode the integrator.
 		const dt = Math.min((now - lastTime) / 1000, MAX_DT);
 		lastTime = now;
@@ -124,7 +125,8 @@ export const createSpringValue = (options: SpringValueOptions = {}): SpringValue
 			return;
 		}
 		notify();
-		frame = requestAnimationFrame(tick);
+		// A listener may have stopped or restarted the spring; that loop owns it now.
+		if (frame === self) frame = requestAnimationFrame(tick);
 	};
 
 	const start = (): void => {

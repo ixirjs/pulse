@@ -17,9 +17,10 @@
  */
 
 import type { TransitionConfig } from 'svelte/transition';
-import { easeOut, springEasing } from '../easing';
-import { restoreStyleProp, saveStyleProp } from '../shared/inline-style';
-import type { EasingFn, SpringOptions } from '../shared/types';
+import { easeOut, springEasing } from '../easing/index.js';
+import { shouldReduceMotion } from '../shared/browser.js';
+import { restoreStyleProp, saveStyleProp } from '../shared/inline-style.js';
+import type { EasingFn, SpringOptions } from '../shared/types.js';
 
 export interface PresenceParams {
 	/** Delay before the transition starts (ms). */
@@ -30,6 +31,8 @@ export interface PresenceParams {
 	easing?: EasingFn;
 	/** Spring physics for the curve + auto-sized duration. `true` = defaults. */
 	spring?: SpringOptions | boolean;
+	/** Honor `prefers-reduced-motion` (no delay, no tween). Default true. */
+	respectReducedMotion?: boolean;
 }
 
 const DEFAULT_DURATION = 400;
@@ -53,6 +56,7 @@ const config = (
 	params: PresenceParams,
 	css: (t: number, u: number) => string
 ): TransitionConfig => {
+	if (shouldReduceMotion(params.respectReducedMotion)) return { delay: 0, duration: 0, css };
 	const { duration, easing } = resolveTiming(params);
 	return { delay: params.delay ?? 0, duration, easing, css };
 };

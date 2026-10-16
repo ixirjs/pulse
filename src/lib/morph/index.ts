@@ -3,9 +3,9 @@
  * WAAPI cannot do across arbitrary command lists.
  */
 
-export { morph } from './morph';
-export type { MorphOptions, MorphController } from './morph';
-export { parsePath } from './parse';
-export type { PathCommand } from './parse';
-export { normalizePath } from './normalize';
-export type { Subpath, CubicSegment, Point } from './normalize';
+export { morph } from './morph.js';
+export type { MorphOptions, MorphController } from './morph.js';
+export { parsePath } from './parse.js';
+export type { PathCommand } from './parse.js';
+export { normalizePath } from './normalize.js';
+export type { Subpath, CubicSegment, Point } from './normalize.js';

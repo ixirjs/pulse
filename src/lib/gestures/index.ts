@@ -14,23 +14,23 @@
  * All compose with `animate()` on the same element via the `--motion-*` chain.
  */
 
-export { draggable } from './draggable';
-export type { DraggableOptions, DragAxis, DragInfo } from './draggable';
-export { moveable } from './move';
-export type { MoveableOptions, MoveInfo } from './move';
-export { swipeable } from './swipe';
-export type { SwipeableOptions, SwipeAxis, SwipeDirection, SwipeInfo } from './swipe';
-export { hoverable } from './hover';
-export type { HoverableOptions } from './hover';
-export { focusable } from './focus';
-export type { FocusableOptions } from './focus';
-export { pressable } from './press';
-export type { PressableOptions } from './press';
-export { pinchable } from './pinch';
-export type { PinchableOptions, PinchInfo } from './pinch';
-export { wheelable } from './wheel';
-export type { WheelableOptions, WheelInfo } from './wheel';
-export { reorder } from './reorder';
-export type { ReorderOptions, ReorderHandle } from './reorder';
-export { applyConstraint, xBounds, yBounds } from './constraints';
-export type { DragConstraints, AxisBounds } from './constraints';
+export { draggable } from './draggable.js';
+export type { DraggableOptions, DragAxis, DragInfo } from './draggable.js';
+export { moveable } from './move.js';
+export type { MoveableOptions, MoveInfo } from './move.js';
+export { swipeable } from './swipe.js';
+export type { SwipeableOptions, SwipeAxis, SwipeDirection, SwipeInfo } from './swipe.js';
+export { hoverable } from './hover.js';
+export type { HoverableOptions } from './hover.js';
+export { focusable } from './focus.js';
+export type { FocusableOptions } from './focus.js';
+export { pressable } from './press.js';
+export type { PressableOptions } from './press.js';
+export { pinchable } from './pinch.js';
+export type { PinchableOptions, PinchInfo } from './pinch.js';
+export { wheelable } from './wheel.js';
+export type { WheelableOptions, WheelInfo } from './wheel.js';
+export { reorder } from './reorder.js';
+export type { ReorderOptions, ReorderHandle } from './reorder.js';
+export { applyConstraint, xBounds, yBounds } from './constraints.js';
+export type { DragConstraints, AxisBounds } from './constraints.js';

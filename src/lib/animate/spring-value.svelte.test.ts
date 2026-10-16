@@ -46,4 +46,16 @@ describe('createSpringValue() — live', () => {
 		expect(s.current).toBe(42);
 		expect(s.animating).toBe(false);
 	});
+
+	it('does not re-arm when a listener stops the spring', async () => {
+		const s = createSpringValue();
+		let calls = 0;
+		s.subscribe(() => {
+			if (++calls > 1) s.stop(); // first call is the synchronous initial value
+		});
+		s.set(100);
+		await new Promise((r) => setTimeout(r, 80));
+		expect(calls).toBe(2);
+		expect(s.animating).toBe(false);
+	});
 });

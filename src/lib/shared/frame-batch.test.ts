@@ -52,4 +52,22 @@ describe('createFrameBatch()', () => {
 		expect(second).toHaveBeenCalledOnce();
 		expect(cancel).not.toHaveBeenCalled();
 	});
+
+	it('runs every read before any returned write', () => {
+		let frame: FrameRequestCallback | undefined;
+		vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+			frame = callback;
+			return 1;
+		});
+		const order: string[] = [];
+		const subscriber = (name: string) =>
+			createFrameBatch(() => {
+				order.push(`read ${name}`);
+				return () => order.push(`write ${name}`);
+			});
+		subscriber('a').schedule();
+		subscriber('b').schedule();
+		frame!(0);
+		expect(order).toEqual(['read a', 'read b', 'write a', 'write b']);
+	});
 });

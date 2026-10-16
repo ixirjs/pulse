@@ -18,7 +18,7 @@
  */
 
 import type { ClassValue } from 'svelte/elements';
-import type { MotionElement } from '../shared/types';
+import type { MotionElement } from '../shared/types.js';
 
 export interface DynamicAttrs {
 	/** Write class/style; returns `true` when the DOM actually changed. */

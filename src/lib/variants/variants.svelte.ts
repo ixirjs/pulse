@@ -30,9 +30,14 @@
 
 import { untrack } from 'svelte';
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import { animate } from '../animate';
-import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from '../animate';
+import { isBrowser } from '../shared/browser.js';
+import { animate } from '../animate/index.js';
+import type {
+	AnimateDefaults,
+	AnimateProps,
+	AnimationController,
+	MotionElement
+} from '../animate/index.js';
 
 /** Map of state name → target props. */
 export type VariantMap = Record<string, AnimateProps>;

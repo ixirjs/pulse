@@ -8,7 +8,7 @@
  * DOM-free and pure.
  */
 
-import { parsePath, type PathCommand } from './parse';
+import { parsePath, type PathCommand } from './parse.js';
 
 export type Point = [number, number];
 

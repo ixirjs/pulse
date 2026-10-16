@@ -35,6 +35,14 @@ describe('normalizeInput() — shorthands', () => {
 		expect(result.to).toBe(100);
 		expect(result.duration).toBe(500);
 	});
+
+	it('throws a TypeError naming the prop when there is no target', () => {
+		const bad = [[], [100], { values: [] }, { duration: 200 }, null];
+		for (const input of bad) {
+			// @ts-expect-error — deliberately invalid input
+			expect(() => normalizeInput(input, {}, 'x')).toThrow(/"x"/);
+		}
+	});
 });
 
 describe('normalizeInput() — defaults inheritance', () => {

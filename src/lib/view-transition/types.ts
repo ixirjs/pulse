@@ -2,7 +2,7 @@
  * Public types for the `view-transition` module.
  */
 
-import type { EasingFn, SpringInput } from '../animate/types';
+import type { EasingFn, SpringInput } from '../animate/types.js';
 
 export type { EasingFn, SpringInput };
 

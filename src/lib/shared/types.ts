@@ -17,7 +17,12 @@ export interface SpringOptions {
 	damping?: number;
 	/** Mass of the body (m). Default: 1. */
 	mass?: number;
-	/** Initial velocity in target-units / second. Default: 0. */
+	/**
+	 * Initial velocity in target-units / second. Default: 0.
+	 * Sampled springs (`spring:` on `animate()`, `springEasing()`) run over a
+	 * normalized 0 → 1 travel, so there it is progress / second: divide a px/s
+	 * release velocity by the distance travelled.
+	 */
 	velocity?: number;
 	/** Position delta below which the spring is considered at rest. Default: 0.001. */
 	restDelta?: number;

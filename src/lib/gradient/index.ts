@@ -3,7 +3,7 @@
  * which WAAPI cannot animate natively.
  */
 
-export { animateGradient } from './gradient';
-export type { GradientOptions, GradientController } from './gradient';
-export { parseLinearGradient, formatLinearGradient, parseRGBA, lerpRGBA } from './parse';
-export type { RGBA, LinearGradient, GradientStop } from './parse';
+export { animateGradient } from './gradient.js';
+export type { GradientOptions, GradientController } from './gradient.js';
+export { parseLinearGradient, formatLinearGradient, parseRGBA, lerpRGBA } from './parse.js';
+export type { RGBA, LinearGradient, GradientStop } from './parse.js';

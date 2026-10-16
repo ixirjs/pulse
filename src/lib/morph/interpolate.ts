@@ -8,8 +8,8 @@
  * DOM-free and pure.
  */
 
-import { lerp } from '../shared/math';
-import { normalizePath, type CubicSegment, type Point, type Subpath } from './normalize';
+import { lerp } from '../shared/math.js';
+import { normalizePath, type CubicSegment, type Point, type Subpath } from './normalize.js';
 
 const lerpPoint = (a: Point, b: Point, t: number): Point => [
 	a[0] + (b[0] - a[0]) * t,

@@ -6,7 +6,7 @@
  * Runs in the `client` project.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { animateGradient } from './gradient';
 
 let mounted: HTMLElement[] = [];
@@ -59,5 +59,14 @@ describe('animateGradient()', () => {
 		});
 		expect(el.style.backgroundImage).toBe(normalized(target));
 		ctrl.cancel();
+	});
+
+	it('snaps to target under reduced motion', () => {
+		vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
+		const el = mount();
+		const target = 'linear-gradient(90deg, #0000ff, #ff0000)';
+		animateGradient(el, 'linear-gradient(90deg, #ff0000, #0000ff)', target, { duration: 200 });
+		expect(el.style.backgroundImage).toBe(normalized(target));
+		vi.restoreAllMocks();
 	});
 });

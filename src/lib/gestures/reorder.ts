@@ -22,14 +22,14 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import { listen } from '../shared/listen';
-import { snapshotRect, flipFrom } from '../flip';
-import type { EasingFn } from '../shared/types';
-import { wireTransform } from '../animate/properties/transform-setup';
-import { hintTransformLayer } from '../animate/properties/properties';
-import { restoreStyleProp, saveStyleProp, type SavedStyleProp } from '../shared/inline-style';
-import { capture, lockTouchAction, release } from './pointer-capture';
+import { isBrowser } from '../shared/browser.js';
+import { listen } from '../shared/listen.js';
+import { snapshotRect, flipFrom } from '../flip/index.js';
+import type { EasingFn } from '../shared/types.js';
+import { wireTransform } from '../animate/properties/transform-setup.js';
+import { hintTransformLayer } from '../animate/properties/properties.js';
+import { restoreStyleProp, saveStyleProp, type SavedStyleProp } from '../shared/inline-style.js';
+import { capture, lockTouchAction, release } from './pointer-capture.js';
 
 /** Find the nearest slot center to `target`. Linear — reorder lists are short. */
 export const nearestCenterIndex = (centers: readonly number[], target: number): number => {

@@ -7,8 +7,8 @@
  * is pure.
  */
 
-import { measureWithoutAncestorTransforms } from '../animate/properties/properties';
-import type { AnimateProps } from '../animate/types';
+import { measureWithoutAncestorTransforms } from '../animate/properties/properties.js';
+import type { AnimateProps } from '../animate/types.js';
 
 // ---------------------------------------------------------------------------
 // Types

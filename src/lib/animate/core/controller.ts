@@ -3,11 +3,11 @@
  * and own the lifecycle hooks (`onStart` / `onEnd`) plus inline-style cleanup.
  */
 
-import { isBrowser } from '../../shared/browser';
-import { demoteFoldedTransforms } from '../properties/properties';
-import { playbackControls } from '../../shared/playback';
-import type { AnimateDefaults, AnimationController, MotionElement } from '../types';
-import type { CssWrite } from '../keyframes/keyframes';
+import { isBrowser } from '../../shared/browser.js';
+import { demoteFoldedTransforms } from '../properties/properties.js';
+import { playbackControls } from '../../shared/playback.js';
+import type { AnimateDefaults, AnimationController, MotionElement } from '../types.js';
+import type { CssWrite } from '../keyframes/keyframes.js';
 
 const NOOP = (): void => {};
 const EMPTY_ANIMATIONS: readonly Animation[] = Object.freeze([]);
@@ -113,21 +113,38 @@ export const createController = ({
 		const tick = (): void => {
 			const progress = primaryAnimation.effect?.getComputedTiming().progress ?? 1;
 			onUpdate(progress, element);
-			rafId = requestAnimationFrame(tick);
+			// onUpdate may have cancelled/stopped the controller — don't re-arm.
+			if (rafId) rafId = requestAnimationFrame(tick);
 		};
 		rafId = requestAnimationFrame(tick);
 	};
 
 	let finalized = false;
-	const finalize = (): void => {
+	/**
+	 * Settle on where the animation actually ended. `terminalProgress` is the
+	 * primary effect's progress at its end: `1` for a normal run, `0` (or a
+	 * fraction) after `reverse`, an even `alternate` count, a negative rate or
+	 * fractional iterations, and `null` when the fill doesn't hold the end state.
+	 */
+	const finalize = (terminalProgress: number | null): void => {
 		if (finalized) return;
 		finalized = true;
 		stopRaf();
-		// We don't call commitStyles() because the applyFinalStyles() call below
-		// writes the same end-state we'd commit (and avoids an extra forced style
-		// resolution per animation).
-		cancelAnimations();
-		applyFinalStyles(element, finalStyles, restorations);
+		if (terminalProgress === 1) {
+			// The common case: the end state is the last keyframe we already
+			// computed, so write it directly instead of resolving styles per
+			// animation (which commitStyles() would do).
+			cancelAnimations();
+			applyFinalStyles(element, finalStyles, restorations);
+		} else if (terminalProgress !== null && isBrowser()) {
+			// Ended somewhere else: freeze what is on screen, like stop().
+			demoteFoldedTransforms(element);
+			commitComputedStyles(element, finalStyles);
+			cancelAnimations();
+		} else {
+			// fill 'none' / 'backwards': back to the element's own styles.
+			cancelAnimations();
+		}
 		onTeardown?.();
 	};
 
@@ -143,12 +160,12 @@ export const createController = ({
 				// Capture the terminal timing before finalize() cancels the effects.
 				// This is 1 for a normal one-shot animation, but correctly preserves
 				// alternate/reverse iteration direction.
-				const terminalProgress = primaryAnimation?.effect?.getComputedTiming().progress ?? 1;
-				finalize();
+				const terminalProgress = primaryAnimation?.effect?.getComputedTiming().progress ?? null;
+				finalize(terminalProgress);
 				// The last rAF can run just before WAAPI reaches its terminal time.
 				// Publish the terminal sample explicitly so onUpdate has the same
 				// end-state guarantee as the animation controller itself.
-				defaults.onUpdate?.(terminalProgress, element);
+				defaults.onUpdate?.(terminalProgress ?? 1, element);
 				defaults.onEnd?.(element, { finished: true });
 			},
 			(err) => {
@@ -164,6 +181,11 @@ export const createController = ({
 	const teardown = (): void => {
 		stopRaf();
 		cancelAnimations();
+		// Shares finalize()'s guard: onTeardown releases per-element bookkeeping
+		// (transform ownership counts), so running it twice — cancel after finish,
+		// or cancel twice — would release a newer animation's share.
+		if (finalized) return;
+		finalized = true;
 		onTeardown?.();
 	};
 

@@ -1,4 +1,4 @@
-import type { EasingFn } from '../shared/types';
+import type { EasingFn } from '../shared/types.js';
 
 export const linear: EasingFn = (t) => t;
 
@@ -25,25 +25,25 @@ const withEndpoints =
 	(t) =>
 		t === 0 ? 0 : t === 1 ? 1 : fn(t);
 
-export const quadIn: EasingFn = pow(2);
-export const quadOut: EasingFn = powOut(2);
-export const quadInOut: EasingFn = powInOut(2);
+export const quadIn: EasingFn = /* @__PURE__ */ pow(2);
+export const quadOut: EasingFn = /* @__PURE__ */ powOut(2);
+export const quadInOut: EasingFn = /* @__PURE__ */ powInOut(2);
 
-export const cubicIn: EasingFn = pow(3);
-export const cubicOut: EasingFn = powOut(3);
-export const cubicInOut: EasingFn = powInOut(3);
+export const cubicIn: EasingFn = /* @__PURE__ */ pow(3);
+export const cubicOut: EasingFn = /* @__PURE__ */ powOut(3);
+export const cubicInOut: EasingFn = /* @__PURE__ */ powInOut(3);
 
-export const quartIn: EasingFn = pow(4);
-export const quartOut: EasingFn = powOut(4);
-export const quartInOut: EasingFn = powInOut(4);
+export const quartIn: EasingFn = /* @__PURE__ */ pow(4);
+export const quartOut: EasingFn = /* @__PURE__ */ powOut(4);
+export const quartInOut: EasingFn = /* @__PURE__ */ powInOut(4);
 
-export const quintIn: EasingFn = pow(5);
-export const quintOut: EasingFn = powOut(5);
-export const quintInOut: EasingFn = powInOut(5);
+export const quintIn: EasingFn = /* @__PURE__ */ pow(5);
+export const quintOut: EasingFn = /* @__PURE__ */ powOut(5);
+export const quintInOut: EasingFn = /* @__PURE__ */ powInOut(5);
 
-export const expoIn: EasingFn = withEndpoints((t) => 2 ** (10 * t - 10));
-export const expoOut: EasingFn = withEndpoints((t) => 1 - 2 ** (-10 * t));
-export const expoInOut: EasingFn = withEndpoints((t) =>
+export const expoIn: EasingFn = /* @__PURE__ */ withEndpoints((t) => 2 ** (10 * t - 10));
+export const expoOut: EasingFn = /* @__PURE__ */ withEndpoints((t) => 1 - 2 ** (-10 * t));
+export const expoInOut: EasingFn = /* @__PURE__ */ withEndpoints((t) =>
 	t < 0.5 ? 2 ** (20 * t - 10) / 2 : (2 - 2 ** (-20 * t + 10)) / 2
 );
 
@@ -70,13 +70,13 @@ export const backInOut: EasingFn = (t) =>
 const ELASTIC_C4 = (2 * Math.PI) / 3;
 const ELASTIC_C5 = (2 * Math.PI) / 4.5;
 
-export const elasticIn: EasingFn = withEndpoints(
+export const elasticIn: EasingFn = /* @__PURE__ */ withEndpoints(
 	(t) => -(2 ** (10 * t - 10)) * Math.sin((t * 10 - 10.75) * ELASTIC_C4)
 );
-export const elasticOut: EasingFn = withEndpoints(
+export const elasticOut: EasingFn = /* @__PURE__ */ withEndpoints(
 	(t) => 2 ** (-10 * t) * Math.sin((t * 10 - 0.75) * ELASTIC_C4) + 1
 );
-export const elasticInOut: EasingFn = withEndpoints((t) =>
+export const elasticInOut: EasingFn = /* @__PURE__ */ withEndpoints((t) =>
 	t < 0.5
 		? -(2 ** (20 * t - 10) * Math.sin((20 * t - 11.125) * ELASTIC_C5)) / 2
 		: (2 ** (-20 * t + 10) * Math.sin((20 * t - 11.125) * ELASTIC_C5)) / 2 + 1

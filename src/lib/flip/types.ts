@@ -1,7 +1,7 @@
 import type { Attachment } from 'svelte/attachments';
 import type { ClassValue } from 'svelte/elements';
-import type { FlipRect, FlipRectPair } from './geometry';
-import type { EasingFn, MotionElement } from '../shared/types';
+import type { FlipRect, FlipRectPair } from './geometry.js';
+import type { EasingFn, MotionElement } from '../shared/types.js';
 
 // ---------------------------------------------------------------------------
 // Core geometry
@@ -32,7 +32,10 @@ export interface FlipOpacity {
 export interface FlipOptions {
 	/** Duration in ms, or a function of diagonal distance. */
 	duration?: FlipDuration;
-	/** Easing function or CSS easing string. Default: `cubicOut`. */
+	/**
+	 * Easing function, CSS keyword (`ease-out`, …) or `cubic-bezier(…)` string.
+	 * Other CSS strings (`steps()`, `linear(…)`) fall back to the default. Default: `cubicOut`.
+	 */
 	easing?: FlipEasing;
 	/** Animation delay in ms. */
 	delay?: number;

@@ -6,9 +6,9 @@
  * helper works with any object exposing a `complete` promise.
  */
 
-import { isBrowser, shouldReduceMotion } from '../shared/browser';
-import { supportsViewTransitions, viewTransition } from './view-transition';
-import type { ViewTransitionOptions } from './types';
+import { isBrowser, shouldReduceMotion } from '../shared/browser.js';
+import { supportsViewTransitions, viewTransition } from './view-transition.js';
+import type { ViewTransitionOptions } from './types.js';
 
 /** Structural shape of SvelteKit's `Navigation` — only `complete` is needed. */
 export interface NavigationLike {

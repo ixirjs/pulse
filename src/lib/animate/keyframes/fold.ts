@@ -19,8 +19,8 @@
  * composition contract still holds.
  */
 
-import { TRANSFORM_TEMPLATES } from '../properties/properties';
-import type { KeyframeGroup } from './keyframes';
+import { TRANSFORM_TEMPLATES } from '../properties/properties.js';
+import type { KeyframeGroup } from './keyframes.js';
 
 /** A CSS property whose value is composed from motion vars. */
 export type TransformTarget = keyof typeof TRANSFORM_TEMPLATES;

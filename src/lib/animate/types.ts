@@ -2,7 +2,7 @@
  * Public types for the `animate()` library.
  */
 
-import type { EasingFn, MotionElement, SpringOptions } from '../shared/types';
+import type { EasingFn, MotionElement, SpringOptions } from '../shared/types.js';
 
 export type { EasingFn, MotionElement, SpringOptions };
 

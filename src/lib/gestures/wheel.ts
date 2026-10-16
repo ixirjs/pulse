@@ -18,14 +18,14 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
-import { isBrowser } from '../shared/browser';
-import { listen } from '../shared/listen';
-import { applyConstraint, type AxisBounds } from './constraints';
-import type { MotionElement } from '../animate';
-import { createSpringValue } from '../animate/spring-value';
-import type { SpringOptions } from '../shared/types';
-import { wireTransform } from '../animate/properties/transform-setup';
-import { hintTransformLayer } from '../animate/properties/properties';
+import { isBrowser } from '../shared/browser.js';
+import { listen } from '../shared/listen.js';
+import { applyConstraint, type AxisBounds } from './constraints.js';
+import type { MotionElement } from '../animate/index.js';
+import { createSpringValue } from '../animate/spring-value.js';
+import type { SpringOptions } from '../shared/types.js';
+import { wireTransform } from '../animate/properties/transform-setup.js';
+import { hintTransformLayer } from '../animate/properties/properties.js';
 
 export interface WheelInfo {
 	/** Accumulated scale since the element mounted (baseline 1). */
@@ -167,6 +167,7 @@ export const wheelable = (options: WheelableOptions = {}): Attachment<MotionElem
 			unlisten();
 			detachSpring?.();
 			springScale?.stop();
+			releaseLayer();
 		};
 	};
 };

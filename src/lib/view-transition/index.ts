@@ -23,10 +23,10 @@
  * ```
  */
 
-export { viewTransition, supportsViewTransitions } from './view-transition';
-export { viewTransitionName } from './name.svelte';
-export { viewTransitionNavigate } from './navigation';
+export { viewTransition, supportsViewTransitions } from './view-transition.js';
+export { viewTransitionName } from './name.svelte.js';
+export { viewTransitionNavigate } from './navigation.js';
 
-export type { ViewTransitionOptions, ViewTransitionUpdate } from './types';
-export type { ViewTransitionNameInput } from './name.svelte';
-export type { NavigationLike } from './navigation';
+export type { ViewTransitionOptions, ViewTransitionUpdate } from './types.js';
+export type { ViewTransitionNameInput } from './name.svelte.js';
+export type { NavigationLike } from './navigation.js';

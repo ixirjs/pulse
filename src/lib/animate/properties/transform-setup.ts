@@ -6,8 +6,8 @@
  * data in `properties.ts` so the data can be read without triggering setup.
  */
 
-import { PROPERTY_REGISTRY, TRANSFORM_TEMPLATES } from './properties';
-import type { MotionElement } from '../types';
+import { PROPERTY_REGISTRY, TRANSFORM_TEMPLATES } from './properties.js';
+import type { MotionElement } from '../types.js';
 
 let registered = false;
 

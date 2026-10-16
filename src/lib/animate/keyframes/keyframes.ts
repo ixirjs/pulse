@@ -3,18 +3,18 @@
  * effective timing so we issue a single WAAPI animation per timing bucket.
  */
 
-import { VAR_BIT, type PropDef } from '../properties/properties';
-import type { AnimatableValue, AnimateDefaults, AnimateProps, MotionElement } from '../types';
-import { normalizeInput, resolveTiming } from './normalize';
-import { isBrowser } from '../../shared/browser';
-import { isAutoKeyword, measureKeywordValue } from './keyword';
+import { VAR_BIT, type PropDef } from '../properties/properties.js';
+import type { AnimatableValue, AnimateDefaults, AnimateProps, MotionElement } from '../types.js';
+import { normalizeInput, resolveTiming } from './normalize.js';
+import { isBrowser } from '../../shared/browser.js';
+import { isAutoKeyword, measureKeywordValue } from './keyword.js';
 import {
 	formatValue,
 	isCompositable,
 	readCurrentValue,
 	resolveProp,
 	toKeyframeKey
-} from '../properties/prop-utils';
+} from '../properties/prop-utils.js';
 
 export interface KeyframeGroup {
 	timing: { duration: number; easing: string; delay: number };
@@ -135,7 +135,7 @@ export const buildKeyframes = (
 			transformBits |= VAR_BIT[def.css] ?? 0;
 		}
 
-		const config = normalizeInput(props[key]!, defaults);
+		const config = normalizeInput(props[key]!, defaults, key);
 		const timing = resolveTiming(config, element);
 
 		// Resolve the keyframe stops: a multi-stop `values` sequence, or the

@@ -72,6 +72,7 @@ export const parsePath = (d: string): PathCommand[] => {
 	while (i < n) {
 		skipSep();
 		if (i >= n) break;
+		const start = i;
 
 		let code: string;
 		const ch = d[i]!;
@@ -102,6 +103,10 @@ export const parsePath = (d: string): PathCommand[] => {
 		} else {
 			for (let k = 0; k < count; k++) values.push(readNumber());
 		}
+		// Malformed input: a bad number, or an implicit repeat that consumed
+		// nothing (e.g. a stray number after `Z`). Stop at the error like SVG
+		// renderers do — continuing would loop forever without advancing.
+		if (i === start || values.some(Number.isNaN)) break;
 
 		commands.push({ code, values });
 		lastCode = code;

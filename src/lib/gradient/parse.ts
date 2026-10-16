@@ -4,7 +4,7 @@
  * driver layer, which feeds already-resolved `rgb/rgba/#hex` colours here.
  */
 
-import { lerp } from '../shared/math';
+import { lerp } from '../shared/math.js';
 
 export type RGBA = readonly [r: number, g: number, b: number, a: number];
 

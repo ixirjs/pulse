@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { easeOut } from '$lib/easing';
+import { cssKeywordOf, easeIn, easeOut } from '$lib/easing';
 import {
 	DEFAULT_DELAY,
 	readOptions,
@@ -141,5 +141,13 @@ describe('resolveEasing()', () => {
 
 	it('unknown CSS string falls back to DEFAULT_EASING', () => {
 		expect(resolveEasing('my-custom-unknown-easing')).toBe(DEFAULT_EASING);
+	});
+
+	it('resolves cubic-bezier() strings instead of falling back', () => {
+		const fn = resolveEasing('cubic-bezier(0.42, 0, 1, 1)');
+		expect(fn(0.5)).toBeCloseTo(easeIn(0.5), 5);
+		expect(cssKeywordOf(fn)).toBe('cubic-bezier(0.42, 0, 1, 1)');
+		expect(resolveEasing('cubic-bezier(0.42, 0, 1, 1)')).toBe(fn);
+		expect(resolveEasing('cubic-bezier(0.42, 0, 1)')).toBe(DEFAULT_EASING);
 	});
 });

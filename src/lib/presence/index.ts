@@ -4,7 +4,7 @@
  * mount/unmount choreography.
  */
 
-export { fade, fly, scale, size } from './transitions';
+export { fade, fly, scale, size } from './transitions.js';
 export type {
 	PresenceParams,
 	SizeFields,
@@ -13,4 +13,4 @@ export type {
 	FlyParams,
 	ScaleParams,
 	SizeParams
-} from './transitions';
+} from './transitions.js';

@@ -2,7 +2,7 @@
 	{
 		"name": "Root public API",
 		"path": "./dist/index.js",
-		"limit": "20 kB"
+		"limit": "20.5 kB"
 	},
 	{
 		"name": "animate only",
@@ -13,5 +13,11 @@
 		"name": "flip only",
 		"path": "./dist/flip/index.js",
 		"limit": "9 kB"
+	},
+	{
+		"name": "single easing (named import)",
+		"path": "./dist/index.js",
+		"import": "{ easeOut }",
+		"limit": "500 B"
 	}
 ]
