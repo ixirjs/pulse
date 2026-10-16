@@ -57,6 +57,7 @@ export const frameTween = ({
 
 		const progress = duration > 0 ? Math.min(elapsed / duration, 1) : 1;
 		onFrame(progress);
+		if (done) return; // onFrame cancelled the tween
 		if (progress >= 1) finish(true);
 		else frame = requestAnimationFrame(tick);
 	};

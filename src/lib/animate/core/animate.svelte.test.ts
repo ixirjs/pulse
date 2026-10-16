@@ -74,4 +74,16 @@ describe('animate() onUpdate', () => {
 		await new Promise((r) => setTimeout(r, 50));
 		expect(calls).toBe(after);
 	});
+
+	it('does not re-arm when onUpdate cancels the controller', async () => {
+		const node = mount();
+		let calls = 0;
+		const ctrl = animate(
+			node,
+			{ x: [0, 200] },
+			{ duration: 300, onUpdate: () => (calls++, ctrl.cancel()) }
+		);
+		await new Promise((r) => setTimeout(r, 80));
+		expect(calls).toBe(1);
+	});
 });

@@ -106,6 +106,7 @@ export const createSpringValue = (options: SpringValueOptions = {}): SpringValue
 		Math.abs(target - value) < restDelta && Math.abs(velocity) < restSpeed;
 
 	const tick = (now: number): void => {
+		const self = frame;
 		// dt in seconds, clamped so a long pause can't explode the integrator.
 		const dt = Math.min((now - lastTime) / 1000, MAX_DT);
 		lastTime = now;
@@ -124,7 +125,8 @@ export const createSpringValue = (options: SpringValueOptions = {}): SpringValue
 			return;
 		}
 		notify();
-		frame = requestAnimationFrame(tick);
+		// A listener may have stopped or restarted the spring; that loop owns it now.
+		if (frame === self) frame = requestAnimationFrame(tick);
 	};
 
 	const start = (): void => {

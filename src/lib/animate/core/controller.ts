@@ -113,7 +113,8 @@ export const createController = ({
 		const tick = (): void => {
 			const progress = primaryAnimation.effect?.getComputedTiming().progress ?? 1;
 			onUpdate(progress, element);
-			rafId = requestAnimationFrame(tick);
+			// onUpdate may have cancelled/stopped the controller — don't re-arm.
+			if (rafId) rafId = requestAnimationFrame(tick);
 		};
 		rafId = requestAnimationFrame(tick);
 	};

@@ -82,4 +82,15 @@ describe('frameTween()', () => {
 		expect(queue).toHaveLength(0);
 		expect(complete).not.toHaveBeenCalled();
 	});
+
+	it('does not re-arm when onFrame cancels the tween', () => {
+		const { queue, flush } = installFrames();
+		const tween: { cancel(): void } = frameTween({
+			duration: 100,
+			delay: 0,
+			onFrame: () => tween.cancel()
+		});
+		flush(0);
+		expect(queue).toHaveLength(0);
+	});
 });
