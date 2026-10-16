@@ -37,7 +37,12 @@ import {
 	wireTransform
 } from '../properties/transform-setup.js';
 import { applyFolds, planFolds } from '../keyframes/fold.js';
-import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from '../types.js';
+import type {
+	AnimateDefaults,
+	AnimateProps,
+	AnimationController,
+	MotionElement
+} from '../types.js';
 import { isBrowser, shouldReduceMotion } from '../../shared/browser.js';
 import { formatValue, resolveProp } from '../properties/prop-utils.js';
 

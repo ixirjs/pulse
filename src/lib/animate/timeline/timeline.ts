@@ -35,7 +35,12 @@
 
 import { animate } from '../core/animate.js';
 import { createController } from '../core/controller.js';
-import type { AnimateDefaults, AnimateProps, AnimationController, MotionElement } from '../types.js';
+import type {
+	AnimateDefaults,
+	AnimateProps,
+	AnimationController,
+	MotionElement
+} from '../types.js';
 import { type Anchor, type TimelinePosition, resolvePosition } from './timeline-position.js';
 import {
 	type Entry,

@@ -13,7 +13,12 @@ import type {
 	MotionElement,
 	PropInput
 } from '../types.js';
-import { isPropConfig, normalizeInput, resolveTiming, tupleToConfig } from '../keyframes/normalize.js';
+import {
+	isPropConfig,
+	normalizeInput,
+	resolveTiming,
+	tupleToConfig
+} from '../keyframes/normalize.js';
 
 // ---------------------------------------------------------------------------
 // Entry shapes
