@@ -16,10 +16,10 @@ Spring-powered WAAPI animation utilities and FLIP layout transitions for Svelte 
 npm install @ixirjs/pulse
 ```
 
-Svelte 5 is a required peer dependency:
+Svelte 5.29+ (for `{@attach}`) is a required peer dependency:
 
 ```sh
-npm install svelte@^5
+npm install svelte@^5.29
 ```
 
 ## `animate(element, props, defaults?)`
@@ -84,12 +84,11 @@ The following shorthands animate independent transform components without clobbe
 | -------- | ----------------------- |
 | `x`      | `--motion-x` (px)       |
 | `y`      | `--motion-y` (px)       |
+| `z`      | `--motion-z` (px)       |
 | `scale`  | `--motion-scale`        |
 | `scaleX` | `--motion-scale-x`      |
 | `scaleY` | `--motion-scale-y`      |
 | `rotate` | `--motion-rotate` (deg) |
-| `skewX`  | `--motion-skew-x` (deg) |
-| `skewY`  | `--motion-skew-y` (deg) |
 
 ## `flip(options?)` — Svelte 5 attachment
 

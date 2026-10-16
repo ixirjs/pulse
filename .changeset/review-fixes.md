@@ -11,3 +11,5 @@ Bug fixes from a performance / DX review:
 - `wheelable()` now releases its `will-change` layer hint when the attachment is removed mid-gesture.
 - Timeline positioning now counts `iterations`: an entry with `iterations: 3` occupies three cycles before the next appended entry starts. Entries positioned after an `iterations: Infinity` entry are never reached and are skipped.
 - `inView({ amount })` now enforces the visibility ratio in every engine. Spec-conformant browsers (Firefox) report `isIntersecting` at any overlap, so `onEnter` used to fire, and `onLeave` was skipped, below the requested amount.
+- The `svelte` peer range is now `^5.29.0`, the first release with attachments (`{@attach}`, `svelte/attachments`), which the public API depends on.
+- README: removed the `skewX` / `skewY` shorthands, which were never implemented (there is no individual CSS `skew` property to compose through), and listed the missing `z`.
