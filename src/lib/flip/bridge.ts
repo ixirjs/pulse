@@ -28,7 +28,15 @@ export const createLayoutBridge = (): LayoutBridge => {
 
 	return {
 		writeLayout: (id, rect) => {
-			registry.set(id, { rect, timestamp: performance.now() });
+			const now = performance.now();
+			// Re-insert so the Map stays ordered oldest-first, then drop the expired
+			// head — ids that never come back (feeds, virtual lists) can't pile up.
+			registry.delete(id);
+			for (const [key, entry] of registry) {
+				if (now - entry.timestamp <= LAYOUT_TTL_MS) break;
+				registry.delete(key);
+			}
+			registry.set(id, { rect, timestamp: now });
 		},
 		readLayout: (id) => {
 			const entry = registry.get(id);

@@ -65,4 +65,16 @@ describe('createLayoutBridge()', () => {
 		a.writeLayout('shared', rect(1, 2, 3, 4));
 		expect(b.readLayout('shared')).toBeNull();
 	});
+
+	it('evicts expired records on write, even if their id is never read again', () => {
+		vi.useFakeTimers();
+		const del = vi.spyOn(Map.prototype, 'delete');
+		const bridge = createLayoutBridge();
+		bridge.writeLayout('gone', rect());
+		vi.advanceTimersByTime(300);
+		bridge.writeLayout('fresh', rect());
+		expect(del).toHaveBeenCalledWith('gone');
+		del.mockRestore();
+		vi.useRealTimers();
+	});
 });
