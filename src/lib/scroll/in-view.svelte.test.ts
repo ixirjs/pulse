@@ -37,4 +37,37 @@ describe('inView()', () => {
 		await vi.waitFor(() => expect(onEnter).toHaveBeenCalledOnce());
 		cleanup?.();
 	});
+
+	it('gates on the requested amount, not on any overlap', () => {
+		// Spec-conformant engines (Firefox) report `isIntersecting: true` at any
+		// overlap, even below the threshold; Chromium doesn't. Feed spec entries.
+		let report!: (ratio: number) => void;
+		vi.stubGlobal(
+			'IntersectionObserver',
+			class {
+				constructor(cb: IntersectionObserverCallback) {
+					report = (ratio) =>
+						cb(
+							[
+								{ isIntersecting: ratio > 0, intersectionRatio: ratio } as IntersectionObserverEntry
+							],
+							this as unknown as IntersectionObserver
+						);
+				}
+				observe() {}
+				disconnect() {}
+			}
+		);
+		const onEnter = vi.fn();
+		const onLeave = vi.fn();
+		const cleanup = inView({ amount: 0.5, onEnter, onLeave })(mount());
+		report(0.2);
+		expect(onEnter).not.toHaveBeenCalled();
+		report(0.6);
+		expect(onEnter).toHaveBeenCalledOnce();
+		report(0.3);
+		expect(onLeave).toHaveBeenCalledOnce();
+		cleanup?.();
+		vi.unstubAllGlobals();
+	});
 });

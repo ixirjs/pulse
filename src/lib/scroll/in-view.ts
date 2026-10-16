@@ -29,7 +29,8 @@ export interface InViewOptions {
 	once?: boolean;
 	/**
 	 * Visibility ratio `0…1` that counts as "in view", forwarded to the
-	 * observer's `threshold`. Default 0 (any pixel visible).
+	 * observer's `threshold`. With an array, the smallest value is the enter /
+	 * leave line. Default 0 (any pixel visible).
 	 */
 	amount?: number | number[];
 	/** Margin around the root box (CSS `rootMargin`), e.g. `"-10% 0px"`. */
@@ -49,12 +50,16 @@ export const inView = (options: InViewOptions = {}): Attachment<MotionElement> =
 			return;
 		}
 
+		// `isIntersecting` is true at any overlap, so gate on the ratio too — with
+		// an array, crossing its smallest threshold is what counts as "in view".
+		const minAmount = Math.min(...[amount].flat());
 		let inside = false;
 		const observer = new IntersectionObserver(
 			(entries) => {
 				for (const entry of entries) {
-					if (entry.isIntersecting === inside) continue;
-					inside = entry.isIntersecting;
+					const visible = entry.isIntersecting && entry.intersectionRatio >= minAmount;
+					if (visible === inside) continue;
+					inside = visible;
 					if (inside) {
 						onEnter?.(element);
 						if (once) observer.disconnect();

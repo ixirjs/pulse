@@ -10,3 +10,4 @@ Bug fixes from a performance / DX review:
 - Shared-layout records (`createFlipScope`) for ids that never return are now evicted on the next write, so long-lived scopes over feeds or virtual lists no longer grow without bound.
 - `wheelable()` now releases its `will-change` layer hint when the attachment is removed mid-gesture.
 - Timeline positioning now counts `iterations`: an entry with `iterations: 3` occupies three cycles before the next appended entry starts. Entries positioned after an `iterations: Infinity` entry are never reached and are skipped.
+- `inView({ amount })` now enforces the visibility ratio in every engine. Spec-conformant browsers (Firefox) report `isIntersecting` at any overlap, so `onEnter` used to fire, and `onLeave` was skipped, below the requested amount.
