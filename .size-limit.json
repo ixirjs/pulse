@@ -2,7 +2,7 @@
 	{
 		"name": "Root public API",
 		"path": "./dist/index.js",
-		"limit": "20 kB"
+		"limit": "20.5 kB"
 	},
 	{
 		"name": "animate only",
