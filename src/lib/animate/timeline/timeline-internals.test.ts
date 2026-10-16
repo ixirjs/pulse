@@ -24,6 +24,14 @@ describe('computeAnimateDuration()', () => {
 		expect(computeAnimateDuration(el, props, { duration: 200, delay: 50 })).toBe(250);
 	});
 
+	it('spans every iteration', () => {
+		const props: AnimateProps = { x: [0, 10] };
+		expect(computeAnimateDuration(el, props, { duration: 100, iterations: 3 })).toBe(300);
+		expect(computeAnimateDuration(el, props, { duration: 100, iterations: Infinity })).toBe(
+			Infinity
+		);
+	});
+
 	it('returns 0 for empty props', () => {
 		expect(computeAnimateDuration(el, {}, {})).toBe(0);
 	});

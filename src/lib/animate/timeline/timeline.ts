@@ -174,6 +174,8 @@ export const timeline = (defaults: TimelineDefaults = {}): Timeline => {
 		if (!isBrowser()) return;
 
 		for (const entry of entries) {
+			// Positioned after an infinitely looping entry: it would never be reached.
+			if (!Number.isFinite(entry.start)) continue;
 			if (entry.kind === 'animate') {
 				controllers.push(
 					animate(
