@@ -38,7 +38,7 @@
         "vitest-browser-svelte": "^2.1.0",
       },
       "peerDependencies": {
-        "svelte": "^5.0.0",
+        "svelte": "^5.29.0",
       },
     },
   },
